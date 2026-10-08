@@ -23,6 +23,11 @@ public class WoodenCogCommonConfigs {
     public static final ForgeConfigSpec.ConfigValue<Double> BLAZE_BURNER_KINDLED;
     public static final ForgeConfigSpec.ConfigValue<Double> BLAZE_BURNER_SEETHING;
 
+    public static final ForgeConfigSpec.DoubleValue FAN_BLASTING_TEMPERATURE;
+    public static final ForgeConfigSpec.DoubleValue FAN_SMOKING_TEMPERATURE;
+    public static final ForgeConfigSpec.DoubleValue FAN_OVERHEAT_MULTIPLIER;
+    public static final ForgeConfigSpec.DoubleValue FAN_NO_RECIPE_CEILING;
+
     public static final ForgeConfigSpec.ConfigValue<Boolean> NETHERITE_RESKIN;
 
     public static final ForgeConfigSpec.ConfigValue<Integer> CT_TRANSFORMER_IMPACT;
@@ -50,8 +55,51 @@ public class WoodenCogCommonConfigs {
             BLAZE_BURNER_SMOULDERING = BUILDER.define("blaze_burner_smouldering", 80.0D);
             BLAZE_BURNER_FADING = BUILDER.define("blaze_burner_fading", 750.0D);
             BLAZE_BURNER_KINDLED = BUILDER.define("blaze_burner_kindled", 1350.0D);
-            BLAZE_BURNER_SEETHING = BUILDER.define("blaze_burner_seething", 2000.0D);
+            BLAZE_BURNER_SEETHING = BUILDER
+                    .comment("Seething is Create's superheated burner state. 2300.0 matches Create's own",
+                            "superheated temperature and is the reference temperature of the eighth",
+                            "charcoal forge heat tier: a forge that reaches this value is treated as",
+                            "superheated and drives the basins and mixers above it.")
+                    .define("blaze_burner_seething", 2300.0D);
 
+        BUILDER.pop();
+
+        BUILDER.comment("Fan heating. A fan blows whatever stands behind it: lava blasts, fire and a lit",
+                        "firepit smoke, water splashes. The two temperatures below are the ceilings the",
+                        "blasting and smoking cases heat an item towards - a fan never heats an item past",
+                        "them, however long the item stays in the stream.",
+                        "The overheat guard destroys an item that is thrown into a fan already hotter than",
+                        "it can survive, which is the only way the fan can still consume an item.").push("fan");
+            FAN_BLASTING_TEMPERATURE = BUILDER
+                    .comment("Ceiling for a blasting fan (lava behind the fan).",
+                            "The upstream value was 1700. 1500 stays below the 1535/1540 melting point of",
+                            "wrought iron, cast iron and steel, so a fan can no longer melt those away,",
+                            "while copper, bronze, brass, nickel and black steel still melt as before.")
+                    .defineInRange("blasting_temperature", 1500.0D, 0.0D, 100000.0D);
+
+            FAN_SMOKING_TEMPERATURE = BUILDER
+                    .comment("Ceiling for a smoking fan (fire, campfire or a lit TFC firepit behind the fan).",
+                            "The upstream value was 200.")
+                    .defineInRange("smoking_temperature", 600.0D, 0.0D, 100000.0D);
+
+            FAN_OVERHEAT_MULTIPLIER = BUILDER
+                    .comment("An item that carries a welding temperature is destroyed once it passes",
+                            "welding_temperature * this value.",
+                            "Do not go below 1.25: every TFC metal melts at 1.25 * its welding temperature,",
+                            "so a smaller value would destroy the metal before it is able to melt into a",
+                            "fluid. A metal that has a heating recipe is converted by that recipe first, so",
+                            "no value at or above the ratio can destroy it early.")
+                    .defineInRange("overheat_multiplier", 1.5D, 1.25D, 10.0D);
+
+            FAN_NO_RECIPE_CEILING = BUILDER
+                    .comment("An item with no welding temperature and no heating recipe is destroyed once it",
+                            "passes this temperature; nothing else would ever stop it.",
+                            "The hottest TFC heating recipe needs 1540C and the hottest food destroy recipe",
+                            "900C, so real melting and cooking still happen first.",
+                            "A blasting fan alone stops at blasting_temperature above, so this clause only",
+                            "fires for an item that was already above this value when it entered the fan.",
+                            "Set to 0.0 to let such an item heat without any limit.")
+                    .defineInRange("no_recipe_ceiling", 1600.0D, 0.0D, 100000.0D);
         BUILDER.pop();
 
         BUILDER.push("stress");
@@ -147,6 +195,35 @@ public class WoodenCogCommonConfigs {
 
     private static void addDensityConfig(String itemId, int density, int heatCapacity) {
         MATERIAL_PROPERTIES.put(itemId, BUILDER.define(itemId, Arrays.asList(density,heatCapacity)));
+    }
+
+    /**
+     * Reads one of the fan values. The fan asks for these once per tick per item, so the
+     * ConfigValue is not cached, but a value read before the common config was loaded must
+     * not take the fan down: the built-in default is returned instead.
+     */
+    private static float readFanValue(ForgeConfigSpec.DoubleValue value, float fallback) {
+        try {
+            return value.get().floatValue();
+        } catch (IllegalStateException notLoadedYet) {
+            return fallback;
+        }
+    }
+
+    public static float fanBlastingTemperature() {
+        return readFanValue(FAN_BLASTING_TEMPERATURE, 1500.0F);
+    }
+
+    public static float fanSmokingTemperature() {
+        return readFanValue(FAN_SMOKING_TEMPERATURE, 600.0F);
+    }
+
+    public static float fanOverheatMultiplier() {
+        return readFanValue(FAN_OVERHEAT_MULTIPLIER, 1.5F);
+    }
+
+    public static float fanNoRecipeCeiling() {
+        return readFanValue(FAN_NO_RECIPE_CEILING, 1600.0F);
     }
 
     public static void register(FMLJavaModLoadingContext ctx) {

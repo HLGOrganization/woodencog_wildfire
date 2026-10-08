@@ -134,9 +134,17 @@ public class CogUtil {
 
     /**
      * Use with precaution as this method temperature handling is not precise and has very limited temp values
+     *
+     * The charcoal forge heat ladder now has nine tiers (0-8) instead of eight, because tier 8 is the
+     * superheated tier added by woodencog. Level 1 is 0 degrees and level 8 is the seething
+     * temperature, which leaves seven steps in between - hence the divisor of 7.
+     *
+     * Only the tier that counts as superheated moves: it is now level 8 instead of level 7, which is
+     * exactly what the crucible and the machines sitting on top of a forge need in order to tell a
+     * merely white-hot forge apart from a genuinely superheated one.
      */
     public static float tempFromBlockstate(int blockstateHeat){
-        return ((blockstateHeat - 1)/6.0F) * WoodenCogCommonConfigs.BLAZE_BURNER_SEETHING.get().floatValue(); // set max temperature as max config
+        return ((blockstateHeat - 1)/7.0F) * WoodenCogCommonConfigs.BLAZE_BURNER_SEETHING.get().floatValue(); // set max temperature as max config
     }
 
     public static float toRadPerTick(float rpm) {

@@ -1,0 +1,6 @@
+{
+  "parent": "tfc:block/charcoal_forge/template_forge",
+  "textures": {
+    "top": "woodencog:block/devices/charcoal_forge/8"
+  }
+}

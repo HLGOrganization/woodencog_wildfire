@@ -1,8 +1,6 @@
 package net.chauvedev.woodencog.item;
 
-import com.simibubi.create.content.processing.sequenced.SequencedAssemblyItem;
 import net.chauvedev.woodencog.WoodenCog;
-import net.dries007.tfc.common.items.TFCItems;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
@@ -14,18 +12,17 @@ public class WoodencogItems {
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
 
-        //Unfinished variants
-        TFCItems.METAL_ITEMS.forEach((aDefault, itemTypeRegistryObjectMap) -> {
-            itemTypeRegistryObjectMap.forEach((itemType, itemRegistryObject) -> {
-                assert itemRegistryObject.getKey() != null;
-                String name = itemRegistryObject.getId().toString();
-                String newname = name.replaceAll("tfc:|minecraft:", "") +"/unfinished";
-                ITEMS.register(
-                        newname,
-                        () -> new SequencedAssemblyItem(new Item.Properties())
-                );
-            });
-        });
-
+        // Upstream used to register an "unfinished" twin of every TFC metal item here, one per
+        // entry of TFCItems.METAL_ITEMS - roughly 477 items named <tfc path>/unfinished.
+        //
+        // Nothing ever referred to them: no recipe, tag or loot table in this mod's data, no
+        // creative tab and no other mod in the pack. They also had no translation entries, so
+        // they surfaced as raw keys such as
+        //   item.woodencog.metal.knife_blade.black_bronze.unfinished
+        // and 240 of them had no model either. The registration was removed in this build so
+        // they stop cluttering the JEI item list. See NOTICE.md for the full rationale.
+        //
+        // Restore the loop from upstream 1.2.17 (commit a18dd48, "New Test Block, Item") if a
+        // datapack is ever written that needs these items.
     }
 }

@@ -1,0 +1,203 @@
+Wooden Cog: Wildfire -- NOTICE
+=============================
+
+This jar is an unofficial derivative build of "Wooden Cog" (mod id: woodencog).
+
+Upstream project
+----------------
+Name      : Wooden Cog (woodencog)
+Active    : https://github.com/Manwe03/woodencog              (branch 1.20.1-6.0.3)
+Original  : https://github.com/Sparks-and-Rotation/woodencog  (original repo, archived)
+Modrinth  : https://modrinth.com/mod/woodencog
+CurseForge: https://www.curseforge.com/minecraft/mc-mods/woodencog
+License   : MIT License
+            Copyright (c) 2022 SlimeKnights
+            Copyright (c) 2023 ChauveDev
+
+Base version rebuilt : 1.2.17
+Base commit          : c1f33478f7ce010e26c1546ff30519886eb1381b
+Target               : Minecraft 1.20.1 / Forge 47.x
+
+License compliance
+------------------
+The MIT License permits use, copy, modification, publication, distribution,
+sublicensing and sale, subject to the condition that the copyright notice and
+the permission notice are included in all copies or substantial portions of
+the Software. The upstream license text is reproduced verbatim in
+META-INF/LICENCE and ships inside this jar.
+
+Note on the "All rights reserved" metadata
+------------------------------------------
+The upstream jar released on Modrinth/CurseForge carries the unmodified Forge
+template default `license="All rights reserved"` in its META-INF/mods.toml.
+That value contradicts the upstream repository's LICENCE file (MIT) and the
+Modrinth project page (MIT). The repository LICENCE file is the operative
+license grant, so this derivative build records `license="MIT"` in mods.toml
+to match it.
+
+Modifications made in this derivative
+-------------------------------------
+1. build.gradle
+   - `archivesBaseName` changed from "woodencog" to "woodencog_wildfire".
+     This affects only the output jar file name.
+   - `processResources` now uses `duplicatesStrategy = EXCLUDE`, so the
+     hand-written resources win over the placeholder lang file datagen emits
+     for the same path. This matches what the upstream release ships.
+
+2. src/main/resources/META-INF/mods.toml
+   - displayName changed from "Wooden Cog" to "Wooden Cog: Wildfire"
+   - license changed from "All rights reserved" to "MIT" (see note above)
+   - credits extended with upstream attribution and a non-affiliation statement
+   - description extended with a derivative-build note
+
+3. Added src/main/resources/META-INF/LICENCE (verbatim upstream MIT text)
+   and this NOTICE file, so the required notices travel inside the jar.
+
+4. compat/createmoreburners/CMBIntegrationImpl.java - native integration.
+   The More Burners electric burner used to be patched from outside by the
+   Wildfires mod (WoodenCogMoreBurnerTemperatureMixin), which mapped the block's
+   Create heat level onto the configured thresholds and ramped the temperature
+   with TFC's device-temperature adjustment. That behaviour is now Wooden Cog's
+   own code, reading WoodenCogCommonConfigs directly instead of by reflection.
+   The Wildfires mixin has been disabled. Other More Burners blocks keep the
+   original linear formula.
+
+5. item/WoodencogItems.java - removed a registration nothing used.
+   Upstream registered an "unfinished" twin of every TFC metal item here, by
+   iterating TFCItems.METAL_ITEMS - roughly 477 items named <tfc path>/unfinished.
+   No recipe, tag, loot table or creative tab referenced them, they had no
+   translation entries (so they showed as raw keys such as
+   item.woodencog.metal.knife_blade.black_bronze.unfinished), and 240 of them had
+   no model either. This build drops the registration so they no longer clutter
+   the JEI item list. It came in with upstream commit a18dd48 ("New Test Block,
+   Item"), and reinstating the loop from upstream 1.2.17 restores them.
+
+6. An eighth, superheated charcoal forge heat tier -- new feature.
+   TFC's shared heat_level block state property stops at 7, so a forge could
+   never look hotter than white hot, and everything sitting on top of one - the
+   crucible, and the Create machines read through mixin/heat/MixinBasinBlockEntity
+   - had no way to tell a merely white-hot forge from a genuinely superheated one.
+   This build adds tier 8:
+
+   - mixin/heat/MixinTFCBlockStateProperties.java raises the maximum of TFC's
+     heat_level property from 7 to 8. TFC declares 26 IntegerProperty instances
+     inside a single static initialiser, so the redirect matches on the runtime
+     property name rather than on the call site.
+   - mixin/heat/MixinCharcoalForgeBlockEntity.java promotes a lit forge to tier 8
+     once its device temperature reaches 2300 C. It presents tier 8 to TFC's own
+     ticker as tier 7, so the vanilla Mth.clamp(..., 1, 7) neither fights the
+     value nor performs a second block update per tick, and it is the single
+     writer of tier 8. The superheated tier is therefore stable, not flickering.
+   - utils/CogUtil.java: the reverse mapping from a heat level back to a
+     temperature now spans nine tiers instead of eight (divisor 6 -> 7), which
+     moves the superheated tier from level 7 to level 8. Level 7 is still white
+     hot, it is simply no longer treated as superheated. That is deliberate.
+   - New resources: assets/tfc/blockstates/charcoal_forge.json (TFC's eight
+     variants plus heat_level=8), assets/woodencog/models/block/charcoal_forge/
+     heat_8.json, and the matching top-face texture with its .mcmeta.
+
+   This was previously injected from outside by the Wildfires mod. Wildfires'
+   TFCBlockStatePropertiesMixin is now disabled and its two charcoal forge heat
+   injections have been removed, because the heat_level property must have exactly
+   one owner - two mods extending it would install two redirects on the same
+   IntegerProperty.create call site, and two writers of the same block state would
+   make the model flicker. Wildfires' own earthen oven keeps its heat_level=8
+   variants and now relies on this mod to provide the extended property.
+
+7. Fan heat ceilings and a fan overheat guard.
+   Create's encased fan heats an item towards a ceiling, and this mod used to
+   hard-code both of them: 1700 C with lava behind the fan, 200 C with fire, a
+   campfire or a lit TFC firepit behind it. They are now read from
+   woodencog-common.toml under [woodencog.fan]:
+
+   - blasting_temperature defaults to 1500.0 (upstream 1700.0). 1500 stays below
+     the 1535/1540 melting point of wrought iron, cast iron and every steel, so a
+     fan no longer melts those away; copper, bronze, brass, nickel and black steel
+     still melt as before.
+   - smoking_temperature defaults to 600.0 (upstream 200.0).
+   - overheat_multiplier (1.5) and no_recipe_ceiling (1600.0) bound the new guard
+     in compat/create/FanOverheatGuard.java, which mixin/MixinFanOverheat.java
+     injects into Create's FanProcessing at priority 900, ahead of this mod's own
+     priority 1000 heating injector:
+       * an item that defines a welding temperature is destroyed above
+         welding_temperature * overheat_multiplier. The multiplier must not go
+         below 1.25: every TFC metal melts at 1.25 times its welding temperature,
+         so a smaller value would destroy the metal before it is able to melt.
+       * an item with no welding temperature and no heating recipe would otherwise
+         heat forever, so it is destroyed above no_recipe_ceiling. Because a
+         blasting fan on its own now stops at 1500, this clause only fires for an
+         item that was already above 1600 when it entered the fan; set it to 0.0 to
+         switch it off.
+     Neither injection cancels while an item is below its ceiling, so the ordinary
+     heating, cooking and melting paths are untouched.
+
+   Fixed at the same time: the dropped-item injection used to cancel Create's own
+   fan processing whenever TFC's heating recipe had nothing to apply yet. Because
+   CallbackInfoReturnable.setReturnValue also cancels, an item carrying both TFC
+   heat data and a Create splashing recipe could never be washed while lying on
+   the ground, even though the same item washed normally on a belt or a depot
+   (that path only cancels when the TFC heating recipe actually changed the
+   stack). The dropped-item injection now cancels only for lava and fire fans,
+   where this mod deliberately takes the item over; a water fan just cools the
+   item and hands it back to Create, so washing works again.
+
+   The guard and its two values were previously injected from outside by the
+   Wildfires mod (first.wildfires.mixin.create.FanOverheatMixin,
+   first.wildfires.compat.create.FanOverheatGuard, wildfires-fan-heat.toml, which
+   defaulted to overheatMultiplier 1.3 and noRecipeCeiling 1600.0 and which the
+   pack raised to 1.5). Every item a fan heats passes through this mod, so the fan
+   now has a single owner. Wildfires' mixin and its config registration are
+   disabled, and wildfires-fan-heat.toml is no longer created and is inert where it
+   already exists. Nothing about the guard's behaviour changed other than the two
+   ceilings named above and where its values are read from.
+
+   blaze_burner_seething now defaults to 2300.0 instead of 2000.0, to match
+   Create's own superheated temperature and the threshold at which a charcoal forge
+   is promoted to heat tier 8 by item 6. The pack config already set 2300.0, so no
+   world sees a change from that default.
+
+Mod id and compatibility
+------------------------
+The mod id remains "woodencog". No Java package, registry name or mixin config
+was renamed, and no asset or data namespace was rewritten. This build is a
+drop-in replacement for the upstream woodencog 1.2.x jar on Minecraft 1.20.1 /
+Forge, and is save-compatible with worlds that already used woodencog.
+
+The only registry change is the removal described in item 5 above. Those items
+were not obtainable through gameplay, so no legitimate save contains them.
+
+Item 6 extends an existing block state property instead of adding a block. A
+forge only ever stored values 0 to 7, so no existing world holds a value the
+extended property cannot represent, and no migration is needed. The reverse is
+not true: heat_level=8 has to be known to the client, so every client that joins
+a server running this build needs this mod as well. A vanilla TFC client cannot
+represent the tier and will fail to load that block state definition.
+
+No endorsement
+--------------
+This build is unofficial and is not affiliated with, sponsored by, or endorsed
+by the original authors or contributors of Wooden Cog.
+
+Bundled third-party content
+---------------------------
+Create (MIT) -- one overridden texture under assets/create/.
+
+TerraFirmaCraft (EUPL-1.2) -- no TFC code and no TFC textures are redistributed.
+Present are woodencog-authored data pack overrides under data/tfc/, plus
+assets/tfc/blockstates/charcoal_forge.json. The latter is a compatibility
+override: a mod cannot append a variant to another mod's block state file, so the
+nine-entry variant table replaces TFC's eight-entry table. Its eight original
+entries are unmodified model references and its textures are untouched; the ninth
+entry points at this mod's own model.
+
+Wildfires -- the tier 8 top-face texture at
+assets/woodencog/textures/block/devices/charcoal_forge/8.png and its .mcmeta are
+copies of Wildfires' earthen_oven_heat_8.png. That sprite is original artwork
+authored for Wildfires (16x32 with two frames, whereas TFC's tier 7 texture is
+16x208 with thirteen) and is reused here by its own author as their own work.
+
+Wildfires -- compat/create/FanOverheatGuard.java and mixin/MixinFanOverheat.java are
+the relocated Wildfires fan guard (first.wildfires.compat.create.FanOverheatGuard
+and first.wildfires.mixin.create.FanOverheatMixin). They were changed only where
+they read the two ceilings, which now come from this mod's config, and the mixin
+keeps the same priority. Reused here by their own author as their own work.

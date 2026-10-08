@@ -33,11 +33,14 @@ public class MixinFanProcessing {
 
         if(type.equals(AllFanProcessingTypes.BLASTING)) {
             if(!DataPackRegistries.isInTempBlacklist(inputStack, registryAccess)) {
-                HeatCapability.addTemp(cap, 1700);
+                // Lava behind the fan. The ceiling is configurable; the blasting fan cannot reach
+                // the 2300C superheated state of a burner, the two are separate systems.
+                HeatCapability.addTemp(cap, WoodenCogCommonConfigs.fanBlastingTemperature());
             }
         } else if (type.equals(AllFanProcessingTypes.SMOKING)) {
             if(!DataPackRegistries.isInTempBlacklist(inputStack, registryAccess)) {
-                HeatCapability.addTemp(cap, 200);
+                // Fire, campfire or a lit TFC firepit behind the fan.
+                HeatCapability.addTemp(cap, WoodenCogCommonConfigs.fanSmokingTemperature());
             }
         } else if (type.equals(AllFanProcessingTypes.SPLASHING)) {
             cap.setTemperature(HeatCapability.adjustTempTowards(cap.getTemperature(),0,8));
@@ -122,7 +125,18 @@ public class MixinFanProcessing {
             ItemStack result = MixinFanProcessing.applyTFCHeatingRecipe(inputStack, cap);
 
             if(result.equals(inputStack)){
-                cir.setReturnValue(false);
+                // TFC has nothing to apply at this temperature.
+                // A lava or fire fan stays TFC-only: setReturnValue also cancels the method, so
+                // Create's own processing does not run on top of the temperature written above.
+                if(type.equals(AllFanProcessingTypes.BLASTING) || type.equals(AllFanProcessingTypes.SMOKING)) {
+                    cir.setReturnValue(false);
+                    return;
+                }
+                // A water fan (or an addon fan type) only cools the item here, so Create's own
+                // processing has to keep running. Cancelling used to make a dropped item that has
+                // both TFC heat data and a Create splashing recipe impossible to wash on the ground,
+                // while the belt/depot path washed it fine because that path only cancels when the
+                // TFC heating recipe actually changed the stack.
                 return;
             }
 

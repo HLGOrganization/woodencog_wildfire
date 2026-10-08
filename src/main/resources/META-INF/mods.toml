@@ -9,7 +9,7 @@ modLoader="javafml" #mandatory
 loaderVersion="[40,)" #mandatory This is typically bumped every Minecraft version by Forge. See our download page for lists of versions.
 # The license for you mod. This is mandatory metadata and allows for easier comprehension of your redistributive properties.
 # Review your options at https://choosealicense.com/. All rights reserved is the default copyright stance, and is thus the default here.
-license="All rights reserved"
+license="MIT"
 # A URL to refer people to when problems occur with this mod
 #issueTrackerURL="https://change.me.to.your.issue.tracker.example.invalid/" #optional
 # A list of mods - how many allowed here is determined by the individual mod loader
@@ -21,9 +21,18 @@ modId="woodencog" #mandatory
 # see the associated build.gradle script for how to populate this completely automatically during a build
 version="${file.jarVersion}" #mandatory
  # A display name for the mod
-displayName="Wooden Cog"
+displayName="Wooden Cog: Wildfire"
 logoFile="pack.png"
-credits="Thanks to Create and TFC authors, also thanks to SeriousCreeper dor allowing usage of his code in this mod"
+credits='''
+Upstream "Wooden Cog" (mod id: woodencog) is Copyright (c) 2022 SlimeKnights and (c) 2023 ChauveDev,
+released under the MIT License. Upstream authors and maintainers: ChauveDev (chauve-dev), Manwe03,
+Baldus_Maximus, DeltaAnto and contributors.
+Thanks to Create and TFC authors, also thanks to SeriousCreeper for allowing usage of his code in this mod.
+
+"Wooden Cog: Wildfire" is an unofficial derivative build repackaged for the TFC_Wild_Fire modpack.
+It is NOT affiliated with, sponsored by, or endorsed by the original authors.
+See META-INF/LICENCE (upstream MIT text) and META-INF/NOTICE (attribution and list of changes).
+'''
 authors="Baldus_Maximus, DeltaAnto"
 description='''
 Woodencog is a compatibility mod for create and TFC. This mod allow the player to automate almost every aspect of TFC with create.
@@ -34,6 +43,10 @@ Woodencog is a compatibility mod for create and TFC. This mod allow the player t
 - Temperature of item can be handled with fans (heating and cooling)
 - Charcoal forge can be accessed by a mechanical arm
 - Machine can damage over time and need to be repaired with an hammer
+
+--- Wildfire derivative build ---
+Unofficial rebuild of WoodenCog 1.2.17 for the TFC_Wild_Fire modpack.
+Original mod by its upstream authors, licensed under MIT. Not affiliated with or endorsed by them.
 '''
 # A dependency - use the . to indicate dependency for a specific modid. Dependencies are optional.
 [[dependencies.woodencog]] #optional

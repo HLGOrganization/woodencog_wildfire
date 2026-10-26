@@ -1,0 +1,220 @@
+{
+  "credit": "Made with Blockbench. UV as-is. render_type=cutout clips fully-transparent pixels. A face that draws an outer wall below y=11 is pushed out 0.05 so it sits in front of a belt casing (y:0..11) instead of sharing its depth.",
+  "parent": "block/block",
+  "textures": {
+    "particle": "woodencog:block/tunnel_heater",
+    "1": "woodencog:block/tunnel_heater"
+  },
+  "elements": [
+    {
+      "from": [
+        -0.05,
+        -5,
+        -0.05
+      ],
+      "to": [
+        16.05,
+        14,
+        16.05
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0.5,
+            4,
+            5.25
+          ],
+          "texture": "#1"
+        },
+        "east": {
+          "uv": [
+            4,
+            0.5,
+            8,
+            5.25
+          ],
+          "texture": "#1"
+        },
+        "south": {
+          "uv": [
+            0,
+            0.5,
+            4,
+            5.25
+          ],
+          "texture": "#1"
+        },
+        "west": {
+          "uv": [
+            4,
+            0.5,
+            8,
+            5.25
+          ],
+          "texture": "#1"
+        },
+        "up": {
+          "uv": [
+            0,
+            5.25,
+            4,
+            9.25
+          ],
+          "texture": "#1"
+        },
+        "down": {
+          "uv": [
+            4,
+            5.25,
+            8,
+            9.25
+          ],
+          "texture": "#1"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        14,
+        2
+      ],
+      "to": [
+        16,
+        16,
+        14
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            4,
+            0,
+            0,
+            0.5
+          ],
+          "texture": "#1"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0,
+            7.5,
+            0.5
+          ],
+          "texture": "#1"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            4,
+            0.5
+          ],
+          "texture": "#1"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0,
+            7.5,
+            0.5
+          ],
+          "texture": "#1"
+        },
+        "up": {
+          "uv": [
+            8,
+            0,
+            12,
+            3
+          ],
+          "texture": "#1"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        9,
+        2
+      ],
+      "to": [
+        16,
+        -5,
+        14
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            9.25,
+            4,
+            12.75
+          ],
+          "texture": "#1"
+        },
+        "south": {
+          "uv": [
+            0,
+            9.25,
+            4,
+            12.75
+          ],
+          "texture": "#1"
+        },
+        "down": {
+          "uv": [
+            4,
+            9.5,
+            8,
+            12.5
+          ],
+          "texture": "#1"
+        }
+      }
+    },
+    {
+      "from": [
+        0.16,
+        8.86,
+        2.12
+      ],
+      "to": [
+        15.84,
+        -4.86,
+        13.88
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            8,
+            9.25,
+            12,
+            12.75
+          ],
+          "texture": "#1"
+        },
+        "south": {
+          "uv": [
+            8,
+            9.25,
+            12,
+            12.75
+          ],
+          "texture": "#1"
+        },
+        "down": {
+          "uv": [
+            12,
+            9.5,
+            16,
+            12.5
+          ],
+          "texture": "#1"
+        }
+      }
+    }
+  ],
+  "render_type": "minecraft:cutout"
+}

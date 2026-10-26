@@ -43,6 +43,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Mixin(value = BasinBlockEntity.class, remap = false)
 public abstract class MixinBasinBlockEntity implements BasinBlockEntityExtended {
@@ -97,8 +98,23 @@ public abstract class MixinBasinBlockEntity implements BasinBlockEntityExtended 
     @Unique
     public void autoChainRecipes(){
         if(this.getSelectionMode().get() == BasinBlockEntityExtended.SelectionMode.AUTO_FEED){
-            IFluidHandler ouputHandler = ((BasinBlockEntityAccessor) this).getOutputTank().getCapability().resolve().get();
-            IFluidHandler inputHandler = this.inputTank.getCapability().resolve().get();
+            // Both tanks answer with a LazyOptional whose validity depends on the basin still having a
+            // controller, and a tank that has been invalidated resolves to an empty optional - where the
+            // old `.get()` here threw NoSuchElementException out of a tick. Same failure family as the
+            // belt lookup in TunnelHeaterBlockEntity, which crashed for real on 2026-10-15: a capability
+            // is asked for and the answer that says "there is nothing here" is thrown away.
+            // Asked through the capability itself and not through resolve().map(...): resolve() widens the
+            // value to a captured type that does not convert to a typed Optional, and map() would be the
+            // very call that cannot be handed a nullable result.
+            if (!((BasinBlockEntityAccessor) this).getOutputTank().getCapability().isPresent()
+                    || !this.inputTank.getCapability().isPresent()) {
+                return;
+            }
+            IFluidHandler ouputHandler = ((BasinBlockEntityAccessor) this).getOutputTank().getCapability().orElse(null);
+            IFluidHandler inputHandler = this.inputTank.getCapability().orElse(null);
+            if (ouputHandler == null || inputHandler == null) {
+                return;
+            }
 
             for(int slot = 0; slot < ouputHandler.getTanks(); ++slot) {
                 FluidStack fs = ouputHandler.getFluidInTank(slot).copy();

@@ -7,6 +7,9 @@
 
   "block.woodencog.wooden_generator": "Wooden Generator",
 
+  "block.woodencog.hot_air_chamber": "Airflow Heater",
+  "block.woodencog.tunnel_heater": "Tunnel Heater",
+
   "category.woodencog.heated_mixing": "Heated Mixing",
   "category.woodencog.heated_pressing": "Heated Pressing",
   "category.woodencog.heated_compacting": "Heated Compacting",
@@ -34,6 +37,11 @@
   "woodencog.basin.selection_mode.normal": "",
   "woodencog.basin.selection_mode.auto_feed": "Use output fluids as input fluids",
   "woodencog.recipes.chain": "Mode",
+
+  "woodencog.tunnel_heater.mode": "Tunnel Heater Mode",
+  "woodencog.tunnel_heater.mode.heat": "Heat: items pass straight through, heated up to welding temperature x1.2",
+  "woodencog.tunnel_heater.mode.workable": "Heat to workable: hold items until they can be worked",
+  "woodencog.tunnel_heater.mode.weldable": "Heat to weldable: hold items until they can be welded",
 
   "recipe.assembly.pressing": "Assembly Pressing"
 }

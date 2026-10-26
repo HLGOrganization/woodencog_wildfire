@@ -1,0 +1,9 @@
+{
+  "block.woodencog.hot_air_chamber": "气流加热器",
+  "block.woodencog.tunnel_heater": "隧道加热炉",
+
+  "woodencog.tunnel_heater.mode": "隧道加热炉模式",
+  "woodencog.tunnel_heater.mode.heat": "加热：物品照常通过，加热到焊接温度 ×1.2",
+  "woodencog.tunnel_heater.mode.workable": "加热至可加工：拦住物品，直到可以加工",
+  "woodencog.tunnel_heater.mode.weldable": "加热至可焊接：拦住物品，直到可以焊接"
+}

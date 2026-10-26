@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "FIF",
+    "ITI",
+    "FIF"
+  ],
+  "key": {
+    "F": {
+      "item": "tfc:ceramic/fire_brick"
+    },
+    "I": {
+      "tag": "forge:double_ingots/wrought_iron"
+    },
+    "T": {
+      "item": "create:fluid_tank"
+    }
+  },
+  "result": {
+    "item": "woodencog:hot_air_chamber"
+  }
+}

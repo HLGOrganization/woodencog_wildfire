@@ -76,6 +76,8 @@ public class WoodenCog {
         if(event.getTabKey() == AllCreativeModeTabs.BASE_CREATIVE_TAB.getKey()){
             event.accept(WoodencogBlocks.CT_TRANSFORMER.get());
             event.accept(WoodencogBlocks.WOODEN_GENERATOR.get());
+            event.accept(WoodencogBlocks.HOT_AIR_CHAMBER.get());
+            event.accept(WoodencogBlocks.TUNNEL_HEATER.get());
         }
     }
 

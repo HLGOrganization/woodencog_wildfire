@@ -6,6 +6,8 @@
   "refmap": "woodencog.refmap.json",
   "plugin": "net.chauvedev.woodencog.compat.WoodenCogMixinPlugin",
   "mixins": [
+    "MixinAirCurrent",
+    "MixinBlastingType",
     "MixinBlockHelper",
     "MixinCharcoalForgeBlock",
     "MixinCrucibleBlock",
@@ -17,6 +19,8 @@
     "MixinSmokingType",
     "armor.MixinBacktankItemLayered",
     "armor.MixinBaseArmorItem",
+    "belt.MixinBeltInventory",
+    "belt.MixinBeltProcessingBehaviour",
     "blockEnitites.MixinBasinOperatingBlockEntity",
     "blockEnitites.MixinMechanicalMixerBlockEntity",
     "blockEnitites.MixinMechanicalPressBlockEntity",

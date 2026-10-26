@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    "woodencog:hot_air_chamber",
+    "woodencog:tunnel_heater"
+  ]
+}

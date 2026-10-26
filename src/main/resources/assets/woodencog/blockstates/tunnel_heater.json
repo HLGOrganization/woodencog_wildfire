@@ -1,0 +1,62 @@
+{
+  "comment": [
+    "2026-10-25: added the cross (junction) model. A crossing has walls on all four edges,",
+    "so it is the same model whichever way the belt under it runs and takes no rotation.",
+    "The straight tunnel keeps its quarter turn for axis=z. All 16 combinations are spelled",
+    "out so no state is left without a model."
+  ],
+  "variants": {
+    "axis=x,active=false,cross=false,powered=false": {
+      "model": "woodencog:block/tunnel_heater"
+    },
+    "axis=x,active=false,cross=true,powered=false": {
+      "model": "woodencog:block/tunnel_heater_cross"
+    },
+    "axis=x,active=false,cross=false,powered=true": {
+      "model": "woodencog:block/tunnel_heater"
+    },
+    "axis=x,active=false,cross=true,powered=true": {
+      "model": "woodencog:block/tunnel_heater_cross"
+    },
+    "axis=x,active=true,cross=false,powered=false": {
+      "model": "woodencog:block/tunnel_heater_active"
+    },
+    "axis=x,active=true,cross=true,powered=false": {
+      "model": "woodencog:block/tunnel_heater_cross_active"
+    },
+    "axis=x,active=true,cross=false,powered=true": {
+      "model": "woodencog:block/tunnel_heater_active"
+    },
+    "axis=x,active=true,cross=true,powered=true": {
+      "model": "woodencog:block/tunnel_heater_cross_active"
+    },
+    "axis=z,active=false,cross=false,powered=false": {
+      "model": "woodencog:block/tunnel_heater",
+      "y": 90
+    },
+    "axis=z,active=false,cross=true,powered=false": {
+      "model": "woodencog:block/tunnel_heater_cross"
+    },
+    "axis=z,active=false,cross=false,powered=true": {
+      "model": "woodencog:block/tunnel_heater",
+      "y": 90
+    },
+    "axis=z,active=false,cross=true,powered=true": {
+      "model": "woodencog:block/tunnel_heater_cross"
+    },
+    "axis=z,active=true,cross=false,powered=false": {
+      "model": "woodencog:block/tunnel_heater_active",
+      "y": 90
+    },
+    "axis=z,active=true,cross=true,powered=false": {
+      "model": "woodencog:block/tunnel_heater_cross_active"
+    },
+    "axis=z,active=true,cross=false,powered=true": {
+      "model": "woodencog:block/tunnel_heater_active",
+      "y": 90
+    },
+    "axis=z,active=true,cross=true,powered=true": {
+      "model": "woodencog:block/tunnel_heater_cross_active"
+    }
+  }
+}

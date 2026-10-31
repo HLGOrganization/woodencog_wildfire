@@ -463,14 +463,17 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
         // Whether the group is on is a property of the group, not of this block: one signalled member
         // turns the whole connected run on. The block state only carries what is shown, so the answer is
         // mirrored into it here, on the server, and only when it differs.
-        boolean active = this.isActive();
-        this.syncActiveState(active);
+        //
+        // ★ What is mirrored is the WORKING state and not the signal: a heater runs only when its group
+        // is signalled AND the battery the group shares has charge, so a signalled heater with a flat
+        // battery shows as off. isHeating() is the single place that answers that conjunction (see
+        // getAirTemperature), which is why the shown state and the work below cannot disagree.
+        boolean running = this.isHeating();
+        this.syncActiveState(running);
 
-        // A heater is off until redstone turns it on, and redstone anywhere in its group counts: both
-        // the power and the belt hang off that one answer. A heater that is not running holds nothing
-        // either - the belt belongs to the player while the machine is off - which is the first of the
-        // two ways a held item is released.
-        boolean running = active && this.isHeating();
+        // The belt hangs off the same answer: a heater that is not running holds nothing either - the
+        // belt belongs to the player while the machine is off - which is the first of the two ways a
+        // held item is released.
 
         // What this tick wants to do with the item: whether it is to be stopped where it is, and what
         // temperature it is pushed towards. One answer for the hold and the heating, so the two cannot
@@ -1135,26 +1138,51 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
     // ---------------------------------------------------------------------------------------------
 
     /**
+     * Whether the battery this block's group shares holds any charge at all.
+     *
+     * <p>Read through the leader because the battery lives there, and through the capability's own
+     * {@code getEnergyStored()} rather than a field of this class, so the number is the same one
+     * Immersive Engineering's wire filled. A block with no charge is a block that cannot run, whatever
+     * its redstone says.
+     */
+    private boolean hasCharge() {
+        return leader().battery.getEnergyStored() > 0;
+    }
+
+    /**
+     * Whether this heater is actually working, which takes <b>both</b> conditions at once:
+     *
+     * <pre>
+     * 工作 = 本组有红石信号(isActive) &amp;&amp; 共享电池电量 &gt; 0 (hasCharge)
+     * </pre>
+     *
+     * <p>Either one missing means the heater does not run: no signal is a machine that is switched off,
+     * and no charge is a machine that has nothing to run on. The two are kept in one predicate so the
+     * shown {@code ACTIVE} state, the belt hold, the heating and the power draw all read the same answer
+     * and cannot drift apart.
+     */
+    private boolean isWorking() {
+        return this.isActive() && this.hasCharge();
+    }
+
+    /**
      * What this heater heats a fan's air to, or 0 when it heats nothing at all - a heater without a
      * redstone signal, or one whose group's battery is flat. Any member of a group answers with the
      * group's charge, because the battery is the leader's.
      *
-     * <p>The signal and the charge are tested here rather than only in {@link #isHeating()} so that every
-     * question about this block's heat goes through this one answer: an idle heater is cold, and the fan
-     * air chain ({@code HotAirChamberHeat}) therefore never mistakes one for a heat source. It is the
-     * signal of the <em>group</em> ({@link #isActive()}), so a heater that is running because a neighbour
-     * of it is signalled is a heat source for a fan as well.
+     * <p>The signal and the charge are tested here, through {@link #isWorking()}, so that every question
+     * about this block's heat goes through this one answer: an idle heater is cold, and the fan air chain
+     * ({@code HotAirChamberHeat}) therefore never mistakes one for a heat source. It is the signal of the
+     * <em>group</em> ({@link #isActive()}), so a heater that is running because a neighbour of it is
+     * signalled is a heat source for a fan as well.
      *
-     * <p>The temperature itself is one number now - {@code tunnel_heater_temperature}, 1500 by default,
-     * which is what a battery of lava used to give it - because the heater draws Forge Energy and there is
-     * no charge left to look a temperature up by.
+     * <p>The temperature itself is one number - {@code tunnel_heater_temperature}, 1500 by default, which
+     * is what a tank of lava used to give it - because the heater draws Forge Energy and there is no
+     * fluid left to look a temperature up by.
      */
     @Override
     public float getAirTemperature() {
-        if (!this.isActive()) {
-            return 0.0F;
-        }
-        if (leader().battery.getEnergyStored() <= 0) {
+        if (!this.isWorking()) {
             return 0.0F;
         }
         return WoodenCogCommonConfigs.tunnelHeaterTemperature();

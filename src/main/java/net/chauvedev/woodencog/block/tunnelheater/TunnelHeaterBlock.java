@@ -68,11 +68,15 @@ public class TunnelHeaterBlock extends Block implements IBE<TunnelHeaterBlockEnt
     public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
 
     /**
-     * Whether the group this heater is in is working. It says nothing about this block's own signal -
-     * that is {@link #POWERED} - and nothing in the behaviour reads it: the block entity works out
-     * whether its group is on from the group itself and only mirrors the answer here so that the model
-     * can show it. Written by {@code TunnelHeaterBlockEntity#tick} with {@code Block.UPDATE_CLIENTS},
-     * since the block state is the only thing that gets sent to a client.
+     * Whether the group this heater is in is <b>working</b>, which takes both of the conditions at once:
+     * the group carries a redstone signal and the battery the group shares has charge. A signalled
+     * heater with a flat battery is not working and shows as off.
+     *
+     * <p>It says nothing about this block's own signal - that is {@link #POWERED} - and nothing in the
+     * behaviour reads it: the block entity works out the answer from the group and the battery and only
+     * mirrors it here so that the model can show it. Written by
+     * {@code TunnelHeaterBlockEntity#tick} with {@code Block.UPDATE_CLIENTS}, since the block state is
+     * the only thing that gets sent to a client.
      */
     public static final BooleanProperty ACTIVE = BooleanProperty.create("active");
 

@@ -486,6 +486,18 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
             // tick already paid for and does not charge it a second time. A lit heater draws whether or
             // not there is an item under it, which is unchanged.
             this.consume(this.consumptionPerTick());
+
+            // ★ The draw above can spend the very last of the charge, and the state mirrored at the top
+            // of this tick was worked out before that happened. Without this re-read a heater that has
+            // just run dry would keep the lit model for one more tick. Reading the same answer again and
+            // mirroring it here puts the model back on the unlit set on the tick the battery empties,
+            // with no block update and no neighbour involved. `running` is narrowed too, so an item that
+            // could not be paid for is not heated on this tick either.
+            boolean stillRunning = this.isHeating();
+            if (stillRunning != running) {
+                this.syncActiveState(stillRunning);
+                running = stillRunning;
+            }
         }
 
         boolean heat = running && this.heatBeltStack(decision.ceiling());

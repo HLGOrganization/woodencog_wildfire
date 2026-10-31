@@ -17,7 +17,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -27,10 +26,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.fluids.capability.templates.FluidTank;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.energy.EnergyStorage;
+import net.minecraftforge.energy.IEnergyStorage;
 
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
@@ -41,8 +38,14 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * The block entity of a tunnel heater: it holds the fuel fluid, and every tick it heats the item the
+ * The block entity of a tunnel heater: it holds Forge Energy, and every tick it heats the item the
  * Create belt below it is carrying to that item's welding temperature.
+ *
+ * <p><b>It burns Forge Energy, not a fluid.</b> Immersive Engineering's wires, or any other Forge
+ * Energy source, charge the battery a connected run of heaters shares; the heater then draws
+ * {@code tunnel_heater_energy_per_tick} every tick it is switched on. There is no tank and no fuel item
+ * any more, so the temperature is one number ({@code tunnel_heater_temperature}, 1500 by default, which
+ * is what a tank of lava used to give it) rather than a per-fluid table.
  *
  * <h2>What it heats to</h2>
  *
@@ -65,17 +68,17 @@ import java.util.Set;
  * that constant {@code itemCoolingModifier - 1} drag keeps four times the number from being exactly
  * four times the speed.
  *
- * <p><b>A heater that is on burns fuel, and it is off until redstone turns it on.</b> The property
+ * <p><b>A heater that is on draws power, and it is off until redstone turns it on.</b> The property
  * defaults to false, so a heater put down away from any signal does nothing; a redstone signal is what
  * starts it. A signal on any one member of a group is enough for the whole group: every heater of a
  * connected run works out "is my group on" from the same set of signals and reaches the same answer, so
  * one lever switches a line of heaters on together. Every tick the server runs, a heater
- * that has a signal and a fluid that heats spends {@code fan.tunnel_heater_consumption} out of the
- * group's tank and pushes the item below it towards its ceiling. That holds whether or not the belt is
- * carrying anything - a lit furnace keeps burning - so the fuel bill of a tunnel is its length, and the
- * belt it heats is what the fuel buys.
+ * that has a signal and a battery with charge in it spends {@code tunnel_heater_energy_per_tick} out of
+ * the battery the group shares and pushes the item below it towards its ceiling. That holds whether or
+ * not the belt is carrying anything - a running machine keeps drawing - so the power bill of a tunnel
+ * is its length, and the belt it heats is what the power buys.
  *
- * <p>A heater whose group has no signal, or whose tank holds nothing that heats, burns nothing and heats
+ * <p>A heater whose group has no signal, or whose battery is flat, draws nothing and heats
  * nothing, and a fan drawing its air through it picks up no heat from it either: an idle heater is not
  * a heater that runs for free, it is one that is not running. Note the direction of the flags: the
  * {@code POWERED} block state means "this block is signalled", the {@code ACTIVE} one means "this
@@ -84,15 +87,15 @@ import java.util.Set;
  * too.
  *
  * <p><b>One share per tick.</b> The same block is also a heat source of the fan air chain
- * ({@link IAirHeated}), and a fan whose airflow runs through it pays for the millibuckets it took. Both
+ * ({@link IAirHeated}), and a fan whose airflow runs through it pays for the energy it took. Both
  * of those run inside one server tick and both go through {@link #consume(double)}, which is what keeps
  * the block from paying twice for the same tick: see the field {@link #lastConsumedTick}.
  *
- * <h2>Sharing fuel between neighbours</h2>
+ * <h2>Sharing charge between neighbours</h2>
  *
- * <p>Tunnel heaters that sit next to each other are one machine: they share a single tank and a single
- * capacity of {@code 2000 mB} per member, so two of them hold 4000 mB together. A fan or a pipe that
- * touches any member uses that one tank.
+ * <p>Tunnel heaters that sit next to each other are one machine: they share a single battery of
+ * {@code tunnel_heater_energy_capacity} per member, 4000 FE out of the box, so two of them hold 8000 FE
+ * together. A fan or an Immersive Engineering wire that touches any member uses that one battery.
  *
  * <p>Which block entities belong to a group is decided by a breadth first walk over the four horizontal
  * neighbours, not by a facing property: the axis the block does carry is only which way its bore opens,
@@ -102,7 +105,7 @@ import java.util.Set;
  * connected component of the block, and on a straight line of heaters it is the same set the tunnel
  * rule would give.
  *
- * <p><b>The leader.</b> Every member answers through the same tank, and that tank lives in the leader:
+ * <p><b>The leader.</b> Every member answers through the same battery, and that battery lives in the leader:
  * the member of the group with the smallest position, compared x, then y, then z. The comparison is a
  * total order over a finite set, so every member computes the same leader from the same group without
  * talking to the others, and no member has to be elected or agree to anything. There is no chain of
@@ -129,23 +132,23 @@ import java.util.Set;
  * is gone also rebuilds before it answers, so a stale cache can delay a recomputation by at most the
  * tick it would have been invalidated in, never give a wrong leader.
  *
- * <p><b>No fluid is lost or invented when the group changes size.</b> Every member keeps its own copy
- * of the group's fluid, not only the leader, and the copies are kept in step:
+ * <p><b>No charge is lost or invented when the group changes size.</b> Every member keeps its own copy
+ * of the group's charge, not only the leader, and the copies are kept in step:
  * <ul>
- *   <li>the leader writes its fluid into every loaded member of the group on every change
- *       ({@link #onTankChanged()}), so when the leader is broken the member that takes over already
+ *   <li>the leader writes its charge into every loaded member of the group on every change
+ *       ({@link #onEnergyChanged()}), so when the leader is broken the member that takes over already
  *       holds the right amount;</li>
  *   <li>every copy carries the same revision counter, bumped by the leader on each change and copied
- *       along with the fluid, and a group recomputation adopts the state with the highest revision. A
+ *       along with the charge, and a group recomputation adopts the state with the highest revision. A
  *       freshly placed, empty heater that happens to hold the smallest position therefore cannot wipe
- *       the tank of the group it was placed into, and a member returning from an unloaded chunk cannot
+ *       the battery of the group it was placed into, and a member returning from an unloaded chunk cannot
  *       roll the group back to what it last saw. Ties go to the smallest position, so the winner is
  *       still a function of the positions alone.</li>
- *   <li>the physical capacity of the tank is {@code max(2000 * group size, what is stored)}. A group
+ *   <li>the physical capacity of the battery is {@code max(capacity * group size, what is stored)}. A group
  *       that shrinks keeps whatever it holds - the excess is not thrown away, it is simply more than the
- *       new share and becomes usable again if the group grows - and Forge's own {@code FluidTank#fill}
- *       reads that same capacity field, so a fill can never compute a negative room and can never
- *       overwrite what is stored. Only a group of one with more than 2000 mB, and a group that keeps
+ *       new share and becomes usable again if the group grows - and Forge's own {@code EnergyStorage#receiveEnergy}
+ *       reads that same capacity field, so a receive can never compute a negative room and can never
+ *       overwrite what is stored. Only a group of one with more than 4000 FE, and a group that keeps
  *       shrinking, can stay over its share.</li>
  * </ul>
  *
@@ -154,7 +157,7 @@ import java.util.Set;
  * keeps the amount it was last told, which is what it will save and what it will lead with. The amount
  * is therefore exact whenever the old and the new leader are both loaded at the moment of the handover,
  * which is the case a player can see, and can be off by what was spent while one of them was not
- * loaded. Storing the tank outside the block entities - as one record per group in the level's saved
+ * loaded. Storing the battery outside the block entities - as one record per group in the level's saved
  * data - would remove that case and is deliberately not done here.
  *
  * <p><b>The same boundary applies to the group's signal.</b> A member in an unloaded chunk is not part of
@@ -189,24 +192,30 @@ import java.util.Set;
  * {@link TunnelHeaterMode#HEAT}, which is what this block did before modes existed and is the default,
  * and the two that hold the belt: {@link TunnelHeaterMode#WORKABLE} and {@link TunnelHeaterMode#WELDABLE}.
  *
- * <p>Like the tank and the redstone answer, the mode is a property of the group: every member of a group
+ * <p>Like the battery and the redstone answer, the mode is a property of the group: every member of a group
  * reports the leader's mode, turning one heater's value box turns the whole connected run, and a member
  * that joins a group - placed, loaded, or left behind when a group splits - is brought onto the group's
  * mode as the group is resolved. The scope is {@link #collectGroup()}, the same four-horizontal-neighbour
- * connected component that shares the tank, so the heaters that switch together are exactly the ones that
- * burn one fuel.
+ * connected component that shares the battery, so the heaters that switch together are exactly the ones that
+ * draw on one battery.
  *
- * <p>The mode does not touch anything the fan sees: {@link #getAirTemperature()} and the fuel are the
- * same in all three. It only decides what happens to the item on the belt below.
+ * <p>The mode does not touch anything the fan sees: {@link #getAirTemperature()} and the power draw are
+ * the same in all three. It only decides what happens to the item on the belt below.
  */
 public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHeated {
 
-    /** The share of the shared tank one tunnel heater holds, in millibuckets. */
-    public static final int TANK_CAPACITY_PER_BLOCK = 2000;
+    /**
+     * The share of the shared battery one tunnel heater adds, in Forge Energy.
+     *
+     * <p>Kept as the shipped number only; what a battery actually holds is
+     * {@code tunnel_heater_energy_capacity} times the size of the group, read through
+     * {@link WoodenCogCommonConfigs#tunnelHeaterEnergyCapacityPerBlock()}.
+     */
+    public static final int ENERGY_CAPACITY_PER_BLOCK = 4000;
 
-    private static final String TANK_KEY = "Tank";
+    private static final String ENERGY_KEY = "Energy";
     private static final String PENDING_CONSUMPTION_KEY = "PendingConsumption";
-    private static final String TANK_REVISION_KEY = "TankRevision";
+    private static final String ENERGY_REVISION_KEY = "EnergyRevision";
 
     /**
      * How often the belt is asked to send its inventory while a temperature is climbing. Four packets a
@@ -215,14 +224,14 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
      */
     private static final int CLIENT_SYNC_INTERVAL_TICKS = 5;
 
-    private final GroupTank tank = new GroupTank();
-    private final LazyOptional<IFluidHandler> tankHandler = LazyOptional.of(GroupFluidHandler::new);
+    private final GroupBattery battery = new GroupBattery();
+    private final LazyOptional<IEnergyStorage> energyHandler = LazyOptional.of(GroupEnergyHandler::new);
 
-    /** Millibuckets owed but not yet taken, the same fractional carry an air chamber keeps. */
+    /** Forge Energy owed but not yet taken, the same fractional carry an air chamber keeps. */
     private double pendingConsumption;
 
-    /** Bumped by the leader whenever the shared fluid changes; the newest state of a group wins. */
-    private int tankRevision;
+    /** Bumped by the leader whenever the shared charge changes; the newest state of a group wins. */
+    private int energyRevision;
 
     /** The leader of the group this member last resolved, how many members it had, and whether any of them is signalled. */
     @Nullable
@@ -269,17 +278,17 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
     private float satisfiedTarget;
 
     /**
-     * The game tick this block last paid its fuel for, so that it can never pay twice in one tick.
+     * The game tick this block last paid its power for, so that it can never pay twice in one tick.
      *
      * <p>Two things charge the same block within one server tick: its own {@link #tick()}, because a
-     * heater that is on burns, and {@code HotAirChamberHeat#consume}, because a fan whose airflow runs
+     * heater that is on draws, and {@code HotAirChamberHeat#consume}, because a fan whose airflow runs
      * through the block pays for the air it took. Both of them go through {@link #consume(double)},
      * which compares this field against {@code Level#getGameTime()}: that number is raised once per
      * server tick and both callers run inside the same tick, so the second caller of the tick finds the
      * tick already paid for and returns without draining anything.
      *
      * <p>The field is deliberately not saved and not shared with the rest of the group. It belongs to
-     * the block, not to the tank: two heaters of one group each burn their own share, and only the
+     * the block, not to the battery: two heaters of one group each draw their own share, and only the
      * attempts of a single block are folded together. Nothing has to be remembered across a save either,
      * because the guard is only meant to hold within one tick.
      */
@@ -326,13 +335,13 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
      * of a group of heaters carry the rest with it when a player turns it.
      *
      * <p>There is deliberately no {@code onlyActiveWhen}: the box works whether or not the heater is
-     * switched on, so a mode can be chosen before the fuel or the redstone is there. Create's
+     * switched on, so a mode can be chosen before the power or the redstone is there. Create's
      * {@code onlyActiveWhen} would otherwise make the box refuse to open on a block that is off, which
      * is exactly the state a freshly placed heater is in.
      */
     @Override
     public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
-        // The mode box. The block is filled through its own fluid capability and switched on with plain
+        // The mode box. The block is filled through its own energy capability and switched on with plain
         // redstone, so there is no filter and no inventory to hang here.
         this.modeBehaviour = new ScrollOptionBehaviour<>(TunnelHeaterMode.class,
                 Component.translatable("woodencog.tunnel_heater.mode"), this, new TunnelHeaterMode.ModeValueBox());
@@ -364,7 +373,7 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
      * ({@link #satisfiedStack}), which is what makes the answer stop changing once it is "go".
      *
      * <p>A machine that cannot heat right now answers PASS, which is what makes the hold end when the
-     * redstone goes away, the fuel runs out or the mode is turned back to {@code heat}. So does an item
+     * redstone goes away, the power runs out or the mode is turned back to {@code heat}. So does an item
      * with no heat capability, or one whose mode has no target for it - the two ways an item that has
      * nothing to wait for is let through instead of being parked under the heater for good.
      */
@@ -393,11 +402,11 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
     }
 
     // ---------------------------------------------------------------------------------------------
-    // Tick: burn this tick's fuel and heat the item the belt below is carrying
+    // Tick: draw this tick's power and heat the item the belt below is carrying
     // ---------------------------------------------------------------------------------------------
 
     /**
-     * One tick of this heater. On the server it is the one entry point of "on means burning"; on the
+     * One tick of this heater. On the server it is the one entry point of "on means drawing"; on the
      * client it does nothing at all and returns, because everything it used to do there is Create's job
      * now: the belt's own tick stops a held item on both sides, from the lock Create wrote into the item
      * on the server.
@@ -414,12 +423,12 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
      * claim has to be recorded on the very tick the item arrives - the belt may have asked its question
      * earlier in the same tick, when the item was still a fraction below the target.
      *
-     * <p>The order on the server is the point. A lit heater pays its share of the fuel <em>before</em> it
+     * <p>The order on the server is the point. A running heater pays its share of the power <em>before</em> it
      * looks at the belt, so it pays on a tick when the belt is empty, when the item on it has no heat
      * capability and when the item has already reached its target - exactly like a furnace that is kept
      * lit. Then the item is pushed towards the target the mode gives it.
      *
-     * <p>Both halves sit behind the same condition: the heater's group is on, and the tank holds a fluid
+     * <p>Both halves sit behind the same condition: the heater's group is on, and the battery holds charge
      * that actually heats. A heater whose group has no signal and an empty one are the same thing here, a
      * machine that is not running, and the block is placed without a signal - so a fresh tunnel heater
      * does nothing until it, or a heater connected to it, is switched on. A machine that is off holds
@@ -438,7 +447,7 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
             // The client has nothing to do here any more. Holding is Create's own `locked` flag now, set on
             // the server by the belt processing callback below and carried to this side inside the belt's
             // saved item ("Locked" in TransportedItemStack.write/read), and the client's belt tick already
-            // honours that flag - so a held item stays put here without this block doing anything. Burning
+            // honours that flag - so a held item stays put here without this block doing anything. Running
             // and heating were never the client's job. The `lockedExternally` route this replaces did not
             // survive the same trip, which is why the item was not actually stopped in game.
             return;
@@ -447,7 +456,7 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
         // The item this heater last claimed has arrived - is it still the one under this heater? If the
         // belt has carried it on, taken it away or replaced it with another, the claim is about an item
         // that is no longer here and is dropped before anything can be let through on it. This runs every
-        // server tick, whatever the mode, the redstone and the fuel are, and it costs one belt lookup only
+        // server tick, whatever the mode, the redstone and the power are, and it costs one belt lookup only
         // while a claim is outstanding.
         this.forgetSatisfiedIfBeltMovedOn();
 
@@ -458,25 +467,25 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
         this.syncActiveState(active);
 
         // A heater is off until redstone turns it on, and redstone anywhere in its group counts: both
-        // the fuel and the belt hang off that one answer. A heater that is not running holds nothing
+        // the power and the belt hang off that one answer. A heater that is not running holds nothing
         // either - the belt belongs to the player while the machine is off - which is the first of the
         // two ways a held item is released.
-        boolean burning = active && this.isHeating();
+        boolean running = active && this.isHeating();
 
         // What this tick wants to do with the item: whether it is to be stopped where it is, and what
         // temperature it is pushed towards. One answer for the hold and the heating, so the two cannot
         // disagree about the item or about the number.
-        BeltDecision decision = burning ? this.decideFor(mode) : BeltDecision.NONE;
+        BeltDecision decision = running ? this.decideFor(mode) : BeltDecision.NONE;
 
-        if (burning) {
-            // The share of this block, out of the tank the whole group shares. Goes through consume()
+        if (running) {
+            // The share of this block, out of the battery the whole group shares. Goes through consume()
             // and not consumeLocally(), so that a fan that also draws on this block this tick finds the
-            // tick already paid for and does not charge it a second time. A lit heater burns whether or
+            // tick already paid for and does not charge it a second time. A lit heater draws whether or
             // not there is an item under it, which is unchanged.
             this.consume(this.consumptionPerTick());
         }
 
-        boolean heat = burning && this.heatBeltStack(decision.ceiling());
+        boolean heat = running && this.heatBeltStack(decision.ceiling());
 
         // Right after the heating, and in this tick only, is where "this item has arrived" can be read
         // reliably: `heatBeltStack` refuses to write anything once the item is at the ceiling, so an item
@@ -484,7 +493,7 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
         // It has to be read here rather than inside the decision, because the belt may ask its question
         // before this block ticks - then it sees a temperature one tick short of the target, and the tick
         // that finally reaches the target is this one.
-        if (burning) {
+        if (running) {
             this.rememberSatisfied(mode, decision);
         }
 
@@ -726,8 +735,8 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
      * Pushes the item the belt below is carrying towards {@code ceiling}, and answers whether its
      * temperature moved.
      *
-     * <p>Called only by {@link #tick()}, and only for a heater that is burning, so the redstone state,
-     * the fuel and the mode are already settled: what is left here is the belt, and each step is the
+     * <p>Called only by {@link #tick()}, and only for a heater that is drawing, so the redstone state,
+     * the power and the mode are already settled: what is left here is the belt, and each step is the
      * cheapest way to find out that there is nothing to do. Every refusal below is such a step and none
      * of them is a reason to hold the belt - whether the belt is held is answered by
      * {@link #holdDecision(TransportedItemStack)}, on the belt's own question.
@@ -804,7 +813,7 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
     }
 
     // ---------------------------------------------------------------------------------------------
-    // The group of tunnel heaters that share one tank
+    // The group of tunnel heaters that share one battery
     // ---------------------------------------------------------------------------------------------
 
     /**
@@ -841,7 +850,7 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
     /**
      * The group this block entity is in, as a breadth first walk over the four horizontal neighbours.
      * Members in chunks that are not loaded are left out: their block entities do not exist, and no
-     * fluid can be moved into or out of them until they do.
+     * charge can be moved into or out of them until they do.
      */
     private List<TunnelHeaterBlockEntity> collectGroup() {
         List<TunnelHeaterBlockEntity> group = new ArrayList<>();
@@ -885,14 +894,14 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
 
     /**
      * Works out the group this block entity is in, points every member at the leader, decides whether the
-     * group is signalled, and makes the fluid of every member agree with the newest state in the group.
+     * group is signalled, and makes the charge of every member agree with the newest state in the group.
      *
      * <p>Called only when a member has no usable cache, so the walk is not on the per tick path of an
      * idle block. It writes into the other members of the group (their cached leader, their cached size,
-     * their cached answer to "is the group on" and, when they are behind, their fluid), and it never
-     * calls anything that comes back here, so it cannot recurse: the fluid is written with
-     * {@code FluidTank#setFluid}, which does not notify, and the capacity is written through
-     * {@link GroupTank#reconcileCapacity(int)}, which only compares numbers.
+     * their cached answer to "is the group on" and, when they are behind, their charge), and it never
+     * calls anything that comes back here, so it cannot recurse: the charge is written with
+     * {@code GroupBattery#setEnergy}, which does not notify, and the capacity is written through
+     * {@link GroupBattery#reconcileCapacity(int)}, which only compares numbers.
      *
      * <p><b>The group is on when any of its members carries a redstone signal.</b> That is read here, off
      * the block states of the members of this very walk, and every member stores the same answer: two
@@ -911,8 +920,8 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
             if (isEarlier(member.worldPosition, leader.worldPosition)) {
                 leader = member;
             }
-            if (member.tankRevision > newest.tankRevision
-                    || (member.tankRevision == newest.tankRevision
+            if (member.energyRevision > newest.energyRevision
+                    || (member.energyRevision == newest.energyRevision
                         && isEarlier(member.worldPosition, newest.worldPosition))) {
                 newest = member;
             }
@@ -924,13 +933,14 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
             member.cachedGroupSize = group.size();
             member.cachedGroupActive = active;
             if (member != newest && isBehind(member, newest)) {
-                member.tank.setFluid(newest.tank.getFluid().copy());
+                member.battery.setEnergy(newest.battery.getEnergyStored());
                 member.pendingConsumption = newest.pendingConsumption;
-                member.tankRevision = newest.tankRevision;
+                member.energyRevision = newest.energyRevision;
                 member.setChanged();
             }
         }
-        leader.tank.reconcileCapacity(group.size() * TANK_CAPACITY_PER_BLOCK);
+        leader.battery.reconcileCapacity(
+                group.size() * WoodenCogCommonConfigs.tunnelHeaterEnergyCapacityPerBlock());
         leader.setChanged();
 
         // The mode is a property of the group, and a group that has just changed shape has to be brought
@@ -940,16 +950,16 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
     }
 
     /**
-     * Whether a member's copy of the shared state is out of date. The revision covers the fluid itself;
-     * the carry is compared on its own because a fan can raise it without a millibucket being due yet,
+     * Whether a member's copy of the shared state is out of date. The revision covers the charge itself;
+     * the carry is compared on its own because a fan can raise it without a unit of energy being due yet,
      * and the amount is compared because a member that has just been loaded from a stale save is a
      * member of the group all the same. After a member is brought up to date all three are equal to the
      * newest, so this never asks for a second pass.
      */
     private static boolean isBehind(TunnelHeaterBlockEntity member, TunnelHeaterBlockEntity newest) {
-        return member.tankRevision != newest.tankRevision
+        return member.energyRevision != newest.energyRevision
                 || member.pendingConsumption != newest.pendingConsumption
-                || member.tank.getFluidAmount() != newest.tank.getFluidAmount();
+                || member.battery.getEnergyStored() != newest.battery.getEnergyStored();
     }
 
     /** A total order over positions: x, then y, then z. */
@@ -963,7 +973,7 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
         return first.getZ() < second.getZ();
     }
 
-    /** The holder of the group's tank: the smallest of the connected positions, so anyone agrees. */
+    /** The holder of the group's battery: the smallest of the connected positions, so anyone agrees. */
     private TunnelHeaterBlockEntity leader() {
         BlockPos cached = this.cachedLeader;
         if (cached != null) {
@@ -1011,18 +1021,19 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
         }
     }
 
-    /** Points the leader's tank at the group's share of capacity, without ever going below what it holds. */
+    /** Points the leader's battery at the group's share of capacity, without ever going below what it holds. */
     private void reconcileCapacity() {
         TunnelHeaterBlockEntity leader = leader();
-        leader.tank.reconcileCapacity(Math.max(1, leader.cachedGroupSize) * TANK_CAPACITY_PER_BLOCK);
+        leader.battery.reconcileCapacity(Math.max(1, leader.cachedGroupSize)
+                * WoodenCogCommonConfigs.tunnelHeaterEnergyCapacityPerBlock());
     }
 
     /**
-     * The shared fluid changed: this member is the leader that owns it, so the change is counted and
+     * The shared charge changed: this member is the leader that owns it, so the change is counted and
      * spread to the rest of the group before anything else looks at it.
      */
-    private void onTankChanged() {
-        this.tankRevision++;
+    private void onEnergyChanged() {
+        this.energyRevision++;
         rebuildGroup();
         this.setChanged();
         this.sendData();
@@ -1035,7 +1046,7 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
     /**
      * The mode this heater works in: the mode of the group's leader.
      *
-     * <p>The mode is a property of the whole group, like the tank and the answer to "is the group
+     * <p>The mode is a property of the whole group, like the battery and the answer to "is the group
      * signalled", and it is kept consistent the same way: every member caches the same leader, and every
      * loaded member of a group holds the same value in its own value box. Asking the leader rather than
      * the member is what makes the answer the same whichever heater is asked, even on the tick between a
@@ -1066,8 +1077,8 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
      * A player turned this heater's value box: the whole group follows, which is what makes one click on
      * one heater switch a whole tunnel.
      *
-     * <p>The walk is {@link #collectGroup()}, the same connected component that shares the tank, so the
-     * set of heaters that change mode together is exactly the set that share fuel. The members are
+     * <p>The walk is {@link #collectGroup()}, the same connected component that shares the battery, so the
+     * set of heaters that change mode together is exactly the set that share power. The members are
      * written to directly - into the value box's own value and not through its
      * {@code setValue}, which would fire each of their callbacks and have them walk the group in turn.
      * Nothing is lost by that: every member of the group resolves the same leader, so a member that
@@ -1124,27 +1135,29 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
     // ---------------------------------------------------------------------------------------------
 
     /**
-     * What the fluid of the group's tank heats a fan's air to, or 0 when it heats nothing at all - a
-     * heater without a redstone signal, an empty tank, an unknown fluid, or a fluid the config table
-     * lists at 0 such as water. Any member of a group answers with the leader's fluid.
+     * What this heater heats a fan's air to, or 0 when it heats nothing at all - a heater without a
+     * redstone signal, or one whose group's battery is flat. Any member of a group answers with the
+     * group's charge, because the battery is the leader's.
      *
-     * <p>The signal is tested here rather than only in {@link #isHeating()} so that every question about
-     * this block's heat goes through this one answer: an idle heater is cold, and the fan air chain
-     * ({@code HotAirChamberHeat}) therefore never mistakes one for a heat source. It is the signal of the
-     * <em>group</em> ({@link #isActive()}), so a heater that is running because a neighbour of it is
-     * signalled is a heat source for a fan as well.
+     * <p>The signal and the charge are tested here rather than only in {@link #isHeating()} so that every
+     * question about this block's heat goes through this one answer: an idle heater is cold, and the fan
+     * air chain ({@code HotAirChamberHeat}) therefore never mistakes one for a heat source. It is the
+     * signal of the <em>group</em> ({@link #isActive()}), so a heater that is running because a neighbour
+     * of it is signalled is a heat source for a fan as well.
+     *
+     * <p>The temperature itself is one number now - {@code tunnel_heater_temperature}, 1500 by default,
+     * which is what a battery of lava used to give it - because the heater draws Forge Energy and there is
+     * no charge left to look a temperature up by.
      */
     @Override
     public float getAirTemperature() {
         if (!this.isActive()) {
             return 0.0F;
         }
-        FluidStack fluid = leader().tank.getFluid();
-        if (fluid.isEmpty()) {
+        if (leader().battery.getEnergyStored() <= 0) {
             return 0.0F;
         }
-        ResourceLocation fluidId = ForgeRegistries.FLUIDS.getKey(fluid.getFluid());
-        return fluidId == null ? 0.0F : WoodenCogCommonConfigs.tunnelHeaterTemperature(fluidId);
+        return WoodenCogCommonConfigs.tunnelHeaterTemperature();
     }
 
     /** Whether a fan drawing its air through this heater would pick up any heat at all. */
@@ -1154,11 +1167,11 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
     }
 
     /**
-     * Takes {@code millibuckets} out of the group's tank for this block, and folds together the two
-     * things that can ask for it within one tick.
+     * Takes {@code energy} Forge Energy out of the group's battery for this block, and folds together the
+     * two things that can ask for it within one tick.
      *
-     * <p>This is the only way into the tank, and it is used by the heater's own tick (a lit heater
-     * burns {@link #consumptionPerTick()} every tick, belt or no belt) and by
+     * <p>This is the only way into the battery, and it is used by the heater's own tick (a running heater
+     * draws {@link #consumptionPerTick()} every tick, belt or no belt) and by
      * {@code HotAirChamberHeat#consume} (a fan whose airflow runs through this block pays for the air it
      * took). {@link #lastConsumedTick} makes the pair add up to one share per tick and not two: the
      * first caller of a tick sets it to the current game time and drains, the second one finds its own
@@ -1167,12 +1180,12 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
      *
      * <p>A heater whose group is off takes nothing, which the fan side already knows because
      * {@link #isHeating()} is false for it; the check is repeated here so that no path can charge an
-     * idle block. An empty tank and a fluid that does not heat are refused by the caller, which is the
-     * heater's own tick: a tank with nothing burnable in it charges nothing.
+     * idle block. A flat battery is refused by the caller, which is the heater's own tick: a battery with
+     * nothing in it charges nothing.
      */
     @Override
-    public void consume(double millibuckets) {
-        if (millibuckets <= 0.0D || !this.isActive() || this.level == null) {
+    public void consume(double energy) {
+        if (energy <= 0.0D || !this.isActive() || this.level == null) {
             return;
         }
         long now = this.level.getGameTime();
@@ -1181,27 +1194,27 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
             return;
         }
         this.lastConsumedTick = now;
-        leader().consumeLocally(millibuckets);
+        leader().consumeLocally(energy);
     }
 
     /** What one tick of a fan running on this block costs, from this block's own config key. */
     @Override
     public double consumptionPerTick() {
-        return WoodenCogCommonConfigs.fanTunnelHeaterConsumption();
+        return WoodenCogCommonConfigs.tunnelHeaterEnergyPerTick();
     }
 
-    /** Drains the shared tank, carrying the fraction of a millibucket that is not due yet. */
-    private void consumeLocally(double millibuckets) {
-        this.pendingConsumption += millibuckets;
+    /** Drains the shared battery, carrying the fraction of a unit that is not due yet. */
+    private void consumeLocally(double energy) {
+        this.pendingConsumption += energy;
         int due = (int) this.pendingConsumption;
         if (due <= 0) {
             return;
         }
-        int drained = this.tank.drain(due, IFluidHandler.FluidAction.EXECUTE).getAmount();
-        // A tank that could not pay the whole amount has run dry: nothing is owed from here on.
+        int drained = this.battery.drainInternal(due);
+        // A battery that could not pay the whole amount has run flat: nothing is owed from here on.
         this.pendingConsumption = drained >= due ? this.pendingConsumption - due : 0.0D;
-        // The drain told the group about the new amount while this correction was still on its way, so
-        // the group is told once more: it must never hold a carry that its tank has already paid.
+        // The drain told the group about the new charge while this correction was still on its way, so
+        // the group is told once more: it must never hold a carry that its battery has already paid.
         rebuildGroup();
     }
 
@@ -1222,7 +1235,7 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
     /**
      * Whether the group this heater is in is on, which is the case when any member of it carries a
      * redstone signal: one signalled heater turns the whole connected run on, and they all heat the belt
-     * below them, all draw on the tank they share and all give a fan their heat.
+     * below them, all draw on the battery they share and all give a fan their heat.
      *
      * <p>The answer is resolved together with the leader and cached the same way, so asking per tick is
      * free: a member with an intact cache walks nothing. It is deliberately not read from the block state
@@ -1235,104 +1248,134 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
     }
 
     // ---------------------------------------------------------------------------------------------
-    // Fluid capability, saving, and the tank itself
+    // Energy capability, saving, and the battery itself
     // ---------------------------------------------------------------------------------------------
 
     /**
-     * Every member of a group offers the same tank, so a pipe, a pump or a bucket can fill and empty the
-     * machine through any one of them. The lookups go through the leader and the leader's tank keeps its
-     * capacity in step with the size of the group before it answers, which is why this is an
-     * {@code IFluidHandler} of its own and not the tank itself.
+     * Every member of a group offers the same battery, so an Immersive Engineering wire (or any other
+     * Forge Energy source) can charge the machine through any one of them. The lookups go through the
+     * leader and the leader's battery keeps its capacity in step with the size of the group before it
+     * answers, which is why this is an {@code IEnergyStorage} of its own and not the battery itself.
      */
-    private final class GroupFluidHandler implements IFluidHandler {
+    private final class GroupEnergyHandler implements IEnergyStorage {
 
-        private GroupTank groupTank() {
-            return TunnelHeaterBlockEntity.this.leader().tank;
+        private GroupBattery groupBattery() {
+            return TunnelHeaterBlockEntity.this.leader().battery;
         }
 
         @Override
-        public int getTanks() {
-            return 1;
+        public int receiveEnergy(int maxReceive, boolean simulate) {
+            return groupBattery().receiveEnergy(maxReceive, simulate);
         }
 
         @Override
-        public FluidStack getFluidInTank(int tankIndex) {
-            return groupTank().getFluidInTank(tankIndex);
+        public int extractEnergy(int maxExtract, boolean simulate) {
+            return groupBattery().extractEnergy(maxExtract, simulate);
         }
 
         @Override
-        public int getTankCapacity(int tankIndex) {
-            return groupTank().getTankCapacity(tankIndex);
+        public int getEnergyStored() {
+            return groupBattery().getEnergyStored();
         }
 
         @Override
-        public boolean isFluidValid(int tankIndex, FluidStack stack) {
-            return groupTank().isFluidValid(tankIndex, stack);
+        public int getMaxEnergyStored() {
+            return groupBattery().getMaxEnergyStored();
         }
 
         @Override
-        public int fill(FluidStack resource, FluidAction action) {
-            return groupTank().fill(resource, action);
+        public boolean canExtract() {
+            return groupBattery().canExtract();
         }
 
         @Override
-        public FluidStack drain(FluidStack resource, FluidAction action) {
-            return groupTank().drain(resource, action);
-        }
-
-        @Override
-        public FluidStack drain(int maxDrain, FluidAction action) {
-            return groupTank().drain(maxDrain, action);
+        public boolean canReceive() {
+            return groupBattery().canReceive();
         }
     }
 
     /**
-     * The tank that is shared by a group of tunnel heaters. Its capacity is not a constant: it is the
-     * group's share of {@link #TANK_CAPACITY_PER_BLOCK} per member, or what the tank already holds when
-     * that is more, so a group that shrinks keeps its fluid instead of clipping it away.
+     * The battery that is shared by a group of tunnel heaters. Its capacity is not a constant: it is the
+     * group's share of {@code tunnel_heater_energy_capacity} per member, or what the battery already
+     * holds when that is more, so a group that shrinks keeps its charge instead of clipping it away.
      *
-     * <p>Forge's {@code FluidTank} keeps its capacity in a field and {@code fill} reads that field
-     * rather than calling {@code getCapacity()}, so the field has to be brought up to date before a fill
-     * is let through; {@code getCapacity} and {@code fill} both do that, and {@code drain} needs no
-     * capacity at all.
+     * <p>Forge's {@code EnergyStorage} keeps its capacity in a field and {@code receiveEnergy} reads that
+     * field rather than calling {@code getMaxEnergyStored()}, so the field has to be brought up to date
+     * before a receive is let through; {@code getMaxEnergyStored} and {@code receiveEnergy} both do that.
+     *
+     * <p><b>Nothing may pull energy back out.</b> A heater is a consumer, and the wires of Immersive
+     * Engineering would otherwise treat the run as a battery and drain it. {@link #extractEnergy} and
+     * {@link #canExtract} therefore refuse every caller, and the heater's own draw goes through
+     * {@link #drainInternal(int)}, which is not part of the capability.
      */
-    private final class GroupTank extends FluidTank {
+    private final class GroupBattery extends EnergyStorage {
 
-        GroupTank() {
-            super(TANK_CAPACITY_PER_BLOCK);
+        GroupBattery() {
+            // maxReceive is deliberately huge: the capacity is the only limit worth having, and a
+            // connector that pushes a whole tick's worth at once must not be cut short by it.
+            super(ENERGY_CAPACITY_PER_BLOCK, Integer.MAX_VALUE / 4, 0);
         }
 
         /**
          * Sets the physical capacity to the larger of the group's share and what is stored. Never lower
-         * than what is stored, which is what keeps a shrinking group from losing fluid: a fill then
+         * than what is stored, which is what keeps a shrinking group from losing charge: a receive then
          * computes a room of zero at worst, and never a negative one that would overwrite the contents.
          */
         void reconcileCapacity(int groupCapacity) {
-            this.capacity = Math.max(groupCapacity, this.getFluidAmount());
+            this.capacity = Math.max(groupCapacity, this.energy);
         }
 
         @Override
-        public int getCapacity() {
+        public int getMaxEnergyStored() {
             TunnelHeaterBlockEntity.this.reconcileCapacity();
             return this.capacity;
         }
 
         @Override
-        public int fill(FluidStack resource, IFluidHandler.FluidAction action) {
+        public int receiveEnergy(int maxReceive, boolean simulate) {
             TunnelHeaterBlockEntity.this.reconcileCapacity();
-            return super.fill(resource, action);
+            int received = super.receiveEnergy(maxReceive, simulate);
+            if (received > 0 && !simulate) {
+                TunnelHeaterBlockEntity.this.onEnergyChanged();
+            }
+            return received;
+        }
+
+        /** A heater is a consumer: no caller outside this class may take charge out of it. */
+        @Override
+        public int extractEnergy(int maxExtract, boolean simulate) {
+            return 0;
         }
 
         @Override
-        protected void onContentsChanged() {
-            TunnelHeaterBlockEntity.this.onTankChanged();
+        public boolean canExtract() {
+            return false;
+        }
+
+        /** The heater's own draw, which is why it does not go through {@link #extractEnergy}. */
+        int drainInternal(int amount) {
+            if (amount <= 0) {
+                return 0;
+            }
+            int drained = Math.min(this.energy, amount);
+            if (drained <= 0) {
+                return 0;
+            }
+            this.energy -= drained;
+            TunnelHeaterBlockEntity.this.onEnergyChanged();
+            return drained;
+        }
+
+        /** Copies the charge of the newest member onto this one during a group rebuild, silently. */
+        void setEnergy(int value) {
+            this.energy = Math.max(0, value);
         }
     }
 
     @Override
     public <T> LazyOptional<T> getCapability(Capability<T> capability, @Nullable Direction side) {
-        if (capability == ForgeCapabilities.FLUID_HANDLER) {
-            return this.tankHandler.cast();
+        if (capability == ForgeCapabilities.ENERGY) {
+            return this.energyHandler.cast();
         }
         return super.getCapability(capability, side);
     }
@@ -1340,7 +1383,7 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
     @Override
     public void invalidateCaps() {
         super.invalidateCaps();
-        this.tankHandler.invalidate();
+        this.energyHandler.invalidate();
     }
 
     @Override
@@ -1365,17 +1408,17 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
             }
         }
         super.write(compound, clientPacket);
-        compound.put(TANK_KEY, this.tank.writeToNBT(new CompoundTag()));
+        compound.putInt(ENERGY_KEY, this.battery.getEnergyStored());
         compound.putDouble(PENDING_CONSUMPTION_KEY, this.pendingConsumption);
-        compound.putInt(TANK_REVISION_KEY, this.tankRevision);
+        compound.putInt(ENERGY_REVISION_KEY, this.energyRevision);
     }
 
     @Override
     protected void read(CompoundTag compound, boolean clientPacket) {
         super.read(compound, clientPacket);
-        this.tank.readFromNBT(compound.getCompound(TANK_KEY));
+        this.battery.setEnergy(compound.getInt(ENERGY_KEY));
         this.pendingConsumption = compound.getDouble(PENDING_CONSUMPTION_KEY);
-        this.tankRevision = compound.getInt(TANK_REVISION_KEY);
+        this.energyRevision = compound.getInt(ENERGY_REVISION_KEY);
         // Whatever was known about the group before is not known now: a loaded block entity has to look
         // its group up again, on whichever side this read ran.
         this.cachedLeader = null;

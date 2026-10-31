@@ -7,9 +7,6 @@ import com.simibubi.create.foundation.block.IBE;
 import net.chauvedev.woodencog.block.WoodencogBlockEntityTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -21,11 +18,9 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
-import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.fluids.FluidUtil;
 
 /**
  * The block of a tunnel heater: a tunnel that sits on top of a Create belt, the way a brass tunnel
@@ -271,7 +266,7 @@ public class TunnelHeaterBlock extends Block implements IBE<TunnelHeaterBlockEnt
 
     /**
      * Keeps the redstone state and the direction of the bore current, drops the block when the belt that
-     * carries it is gone, and tells the block entities around it that the shape of the fuel-sharing
+     * carries it is gone, and tells the block entities around it that the shape of the battery-sharing
      * group may have changed.
      *
      * <p>Setting the state here cannot come back into this method: {@code Level.setBlock} with flag 3
@@ -319,7 +314,7 @@ public class TunnelHeaterBlock extends Block implements IBE<TunnelHeaterBlockEnt
             level.setBlock(pos, updated, Block.UPDATE_ALL);
         }
 
-        // Whether two tunnel heaters share one tank depends on which of them are next to each other, so
+        // Whether two tunnel heaters share one battery depends on which of them are next to each other, so
         // a block placed or broken beside this one can change the group of this one as well: every
         // member of the group is told to look its group up again, not just the neighbour that changed.
         TunnelHeaterBlockEntity.invalidateGroupsAround(level, pos);
@@ -328,21 +323,5 @@ public class TunnelHeaterBlock extends Block implements IBE<TunnelHeaterBlockEnt
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         IBE.onRemove(state, level, pos, newState);
-    }
-
-    /**
-     * Buckets, TFC fluid containers and anything else carrying an item fluid handler, plus Create's
-     * pipes and pumps, fill and empty the group's tank through the same fluid capability. Any member of
-     * a group of tunnel heaters hands out the one tank they share, so this works from every one of them.
-     */
-    @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
-        if (!(level.getBlockEntity(pos) instanceof TunnelHeaterBlockEntity)) {
-            return InteractionResult.PASS;
-        }
-        if (FluidUtil.interactWithFluidHandler(player, hand, level, pos, hitResult.getDirection())) {
-            return InteractionResult.sidedSuccess(level.isClientSide);
-        }
-        return InteractionResult.PASS;
     }
 }

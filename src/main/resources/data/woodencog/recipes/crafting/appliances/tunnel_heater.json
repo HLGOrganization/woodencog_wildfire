@@ -2,7 +2,7 @@
   "type": "minecraft:crafting_shaped",
   "pattern": [
     "FFF",
-    "ITI",
+    "ICI",
     "SSS"
   ],
   "key": {
@@ -12,8 +12,8 @@
     "I": {
       "tag": "forge:double_ingots/wrought_iron"
     },
-    "T": {
-      "item": "create:fluid_tank"
+    "C": {
+      "item": "immersiveengineering:coil_lv"
     },
     "S": {
       "tag": "forge:sheets/wrought_iron"

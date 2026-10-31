@@ -34,8 +34,9 @@ public class WoodenCogCommonConfigs {
     public static final ForgeConfigSpec.DoubleValue FAN_COOLING_RATE;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> FAN_HOT_AIR_CHAMBER_FLUIDS;
     public static final ForgeConfigSpec.DoubleValue FAN_HOT_AIR_CHAMBER_CONSUMPTION;
-    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> FAN_TUNNEL_HEATER_FLUIDS;
-    public static final ForgeConfigSpec.DoubleValue FAN_TUNNEL_HEATER_CONSUMPTION;
+    public static final ForgeConfigSpec.DoubleValue TUNNEL_HEATER_TEMPERATURE;
+    public static final ForgeConfigSpec.DoubleValue TUNNEL_HEATER_ENERGY_PER_TICK;
+    public static final ForgeConfigSpec.IntValue TUNNEL_HEATER_ENERGY_CAPACITY;
     public static final ForgeConfigSpec.DoubleValue FAN_TUNNEL_HEATER_HEATING_RATE;
     public static final ForgeConfigSpec.DoubleValue FAN_TUNNEL_HEATER_TARGET_MARGIN;
     public static final ForgeConfigSpec.BooleanValue FAN_BURNT_FOOD_ENABLED;
@@ -65,10 +66,6 @@ public class WoodenCogCommonConfigs {
     /** The raw table the parsed map below was built from, so a config reload is noticed. */
     private static List<? extends String> parsedHotAirChamberFluidsFrom = List.of();
     private static Map<ResourceLocation, Float> parsedHotAirChamberFluids = Map.of();
-
-    /** The raw table the parsed map below was built from, so a config reload is noticed. */
-    private static List<? extends String> parsedTunnelHeaterFluidsFrom = List.of();
-    private static Map<ResourceLocation, Float> parsedTunnelHeaterFluids = Map.of();
 
     public static final ForgeConfigSpec.ConfigValue<Boolean> NETHERITE_RESKIN;
 
@@ -211,28 +208,32 @@ public class WoodenCogCommonConfigs {
                             "while its fluid is one that does not heat.")
                     .defineInRange("hot_air_chamber_consumption", 0.01D, 0.0D, 1000.0D);
 
-            FAN_TUNNEL_HEATER_FLUIDS = BUILDER
-                    .comment("What a tunnel heater heats to, in the same <fluid id>=<temperature in C>",
-                            "shape as hot_air_chamber_fluids above and shipped with the same table.",
-                            "A tunnel heater takes this temperature two ways: a fan whose airflow runs",
+            TUNNEL_HEATER_TEMPERATURE = BUILDER
+                    .comment("What a tunnel heater heats to, in degrees. It runs on Forge Energy now,",
+                            "not on a fluid, so the temperature is one number instead of a table:",
+                            "1500 is what a tank of lava used to give it, and it is hot enough to",
+                            "take every TFC metal to its welding temperature.",
+                            "A tunnel heater uses this temperature two ways: a fan whose airflow runs",
                             "through it blows air at this temperature, and an item sitting on the belt",
-                            "underneath it is heated towards it directly. 0 means no heating at all,",
-                            "which is what makes water the same to it as an empty tank, and a fluid that",
-                            "is not listed here does not heat either.",
-                            "This key was added after hot_air_chamber_fluids; existing entries of a",
-                            "player's config file are kept, and a new key is appended on first start.")
-                    .defineList("tunnel_heater_fluids", DEFAULT_HOT_AIR_CHAMBER_FLUIDS,
-                            entry -> entry instanceof String);
+                            "underneath it is heated towards it directly. 0 means no heating at all.")
+                    .defineInRange("tunnel_heater_temperature", 1500.0D, 0.0D, 100000.0D);
 
-            FAN_TUNNEL_HEATER_CONSUMPTION = BUILDER
-                    .comment("Millibuckets a tunnel heater loses per tick while a fan draws its air",
-                            "through it, with the same default 0.01 as a hot air chamber.",
-                            "A tunnel heater shares one tank with every tunnel heater it is connected to,",
-                            "so a group of two holds 2 x 2000 mB and two fans drawing on it spend",
-                            "2 x this value per tick.",
-                            "Heating the item on the belt below does not itself draw anything: the",
-                            "millibuckets are only taken by an airflow running through the block.")
-                    .defineInRange("tunnel_heater_consumption", 0.01D, 0.0D, 1000.0D);
+            TUNNEL_HEATER_ENERGY_PER_TICK = BUILDER
+                    .comment("Forge Energy a tunnel heater draws per tick while it is switched on,",
+                            "whether that is a fan drawing its air through it or the heater working on",
+                            "its own tick. The default 20 FE/t lets one IE low voltage wire (256 FE/t)",
+                            "run twelve heaters at once.",
+                            "A tunnel heater shares one battery with every tunnel heater it is connected",
+                            "to, so a group of twelve is one 48000 FE battery that draws 240 FE/t and",
+                            "only needs the wire attached to any one member.")
+                    .defineInRange("tunnel_heater_energy_per_tick", 20.0D, 0.0D, 100000.0D);
+
+            TUNNEL_HEATER_ENERGY_CAPACITY = BUILDER
+                    .comment("Forge Energy one block of a tunnel heater adds to the battery its whole",
+                            "connected run shares. The group of N blocks therefore buffers",
+                            "N x this, which is how a run keeps working for a moment after the wire is",
+                            "cut. The default 4000 holds 200 ticks (ten seconds) of one block's draw.")
+                    .defineInRange("tunnel_heater_energy_capacity", 4000, 1, 10000000);
 
             FAN_TUNNEL_HEATER_HEATING_RATE = BUILDER
                     .comment("Degrees per tick a tunnel heater pushes the item on the belt below it",
@@ -601,27 +602,32 @@ public class WoodenCogCommonConfigs {
     }
 
     /**
-     * The temperature a tunnel heater filled with {@code fluid} heats to, or 0 when the fluid does not
-     * heat at all - it is not in {@code tunnel_heater_fluids}, or the table lists it at 0 such as water.
+     * The temperature a tunnel heater heats to, or 0 when it heats nothing.
      *
-     * <p>Read and re-parsed exactly like {@link #hotAirChamberTemperature(ResourceLocation)}, through
-     * the same parser: the two tables have the same shape and the same meaning.
+     * <p>One number and not a per-fluid table any more: the heater runs on Forge Energy, so there is no
+     * fluid to look a temperature up by. 1500 is what a tank of lava used to give it.
      */
-    public static float tunnelHeaterTemperature(ResourceLocation fluid) {
-        List<? extends String> entries = readConfigList(FAN_TUNNEL_HEATER_FLUIDS, DEFAULT_HOT_AIR_CHAMBER_FLUIDS);
-        if (!entries.equals(parsedTunnelHeaterFluidsFrom)) {
-            parsedTunnelHeaterFluids = parseHotAirChamberFluids(entries);
-            parsedTunnelHeaterFluidsFrom = entries;
-        }
-        return parsedTunnelHeaterFluids.getOrDefault(fluid, 0.0F);
+    public static float tunnelHeaterTemperature() {
+        return readFanValue(TUNNEL_HEATER_TEMPERATURE, 1500.0F);
     }
 
     /**
-     * Millibuckets per tick a tunnel heater takes out of its group's tank while it is switched on,
-     * whether that is a fan running on the tank or the heater burning on its own tick.
+     * Forge Energy a tunnel heater draws per tick while it is switched on, whether that is a fan running
+     * on it or the heater working on its own tick.
      */
-    public static float fanTunnelHeaterConsumption() {
-        return readFanValue(FAN_TUNNEL_HEATER_CONSUMPTION, 0.01F);
+    public static float tunnelHeaterEnergyPerTick() {
+        return readFanValue(TUNNEL_HEATER_ENERGY_PER_TICK, 20.0F);
+    }
+
+    /**
+     * Forge Energy one block of a run adds to the battery the whole run shares.
+     *
+     * <p>Read through {@code readFanValue} rather than straight off the key so that a config file that
+     * cannot be read yet - the same window every other value here guards against - falls back to the
+     * shipped number instead of zero, which would make a battery that holds nothing.
+     */
+    public static int tunnelHeaterEnergyCapacityPerBlock() {
+        return Math.max(1, readFanInt(TUNNEL_HEATER_ENERGY_CAPACITY, 4000));
     }
 
     /**

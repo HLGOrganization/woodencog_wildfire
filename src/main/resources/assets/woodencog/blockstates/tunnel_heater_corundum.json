@@ -1,0 +1,59 @@
+{
+  "comment": [
+    "刚玉版隧道加热器：模型与普通版完全一致，只换贴图（2026-10-31）。"
+  ],
+  "variants": {
+    "axis=x,active=false,cross=false,powered=false": {
+      "model": "woodencog:block/tunnel_heater_corundum"
+    },
+    "axis=x,active=false,cross=true,powered=false": {
+      "model": "woodencog:block/tunnel_heater_corundum_cross"
+    },
+    "axis=x,active=false,cross=false,powered=true": {
+      "model": "woodencog:block/tunnel_heater_corundum"
+    },
+    "axis=x,active=false,cross=true,powered=true": {
+      "model": "woodencog:block/tunnel_heater_corundum_cross"
+    },
+    "axis=x,active=true,cross=false,powered=false": {
+      "model": "woodencog:block/tunnel_heater_corundum_active"
+    },
+    "axis=x,active=true,cross=true,powered=false": {
+      "model": "woodencog:block/tunnel_heater_corundum_cross_active"
+    },
+    "axis=x,active=true,cross=false,powered=true": {
+      "model": "woodencog:block/tunnel_heater_corundum_active"
+    },
+    "axis=x,active=true,cross=true,powered=true": {
+      "model": "woodencog:block/tunnel_heater_corundum_cross_active"
+    },
+    "axis=z,active=false,cross=false,powered=false": {
+      "model": "woodencog:block/tunnel_heater_corundum",
+      "y": 90
+    },
+    "axis=z,active=false,cross=true,powered=false": {
+      "model": "woodencog:block/tunnel_heater_corundum_cross"
+    },
+    "axis=z,active=false,cross=false,powered=true": {
+      "model": "woodencog:block/tunnel_heater_corundum",
+      "y": 90
+    },
+    "axis=z,active=false,cross=true,powered=true": {
+      "model": "woodencog:block/tunnel_heater_corundum_cross"
+    },
+    "axis=z,active=true,cross=false,powered=false": {
+      "model": "woodencog:block/tunnel_heater_corundum_active",
+      "y": 90
+    },
+    "axis=z,active=true,cross=true,powered=false": {
+      "model": "woodencog:block/tunnel_heater_corundum_cross_active"
+    },
+    "axis=z,active=true,cross=false,powered=true": {
+      "model": "woodencog:block/tunnel_heater_corundum_active",
+      "y": 90
+    },
+    "axis=z,active=true,cross=true,powered=true": {
+      "model": "woodencog:block/tunnel_heater_corundum_cross_active"
+    }
+  }
+}

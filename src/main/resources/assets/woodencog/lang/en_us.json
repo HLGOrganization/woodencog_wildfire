@@ -9,6 +9,7 @@
 
   "block.woodencog.hot_air_chamber": "Airflow Heater",
   "block.woodencog.tunnel_heater": "Tunnel Heater",
+  "block.woodencog.tunnel_heater_corundum": "Tunnel Heater (Corundum)",
 
   "category.woodencog.heated_mixing": "Heated Mixing",
   "category.woodencog.heated_pressing": "Heated Pressing",

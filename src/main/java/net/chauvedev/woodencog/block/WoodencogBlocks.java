@@ -9,6 +9,7 @@ import net.chauvedev.woodencog.block.generator.WoodenGeneratorBlock;
 import net.chauvedev.woodencog.block.hotairchamber.HotAirChamberBlock;
 import net.chauvedev.woodencog.block.transformer.CTTransformerBlock;
 import net.chauvedev.woodencog.block.tunnelheater.TunnelHeaterBlock;
+import net.chauvedev.woodencog.block.tunnelheater.TunnelHeaterItem;
 import net.createmod.catnip.lang.FontHelper;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.registries.Registries;
@@ -56,11 +57,33 @@ public class WoodencogBlocks {
     // Same hand-written resources as the chamber above (blockstates/tunnel_heater.json, the two
     // models and the item model), and noOcclusion() because the block is a 5/16 tall hood rather than
     // a full cube: without it the faces of a neighbouring block are culled where the hood is not.
+    //
+    // item(TunnelHeaterItem::new) instead of item(): the item is what encases the belt below in
+    // INDUSTRIAL_IRON on placement, the same way Create's BeltTunnelItem encases it in brass. See
+    // TunnelHeaterItem for why that has to live on the item and not on the block.
     public static final BlockEntry<TunnelHeaterBlock> TUNNEL_HEATER = REGISTRATE.block("tunnel_heater", TunnelHeaterBlock::new)
             .initialProperties(SharedProperties::stone)
             .properties(p -> p.noOcclusion().mapColor(MapColor.PODZOL))
             .transform(TagGen.axeOrPickaxe())
-            .item()
+            .item(TunnelHeaterItem::new)
+            .build()
+            .register();
+
+    /**
+     * 刚玉版隧道加热器（2026-10-31）。
+     *
+     * <p>和上面那个是同一个类、同一个方块实体、同一套行为，只有贴图不同：
+     * {@code tunnel_heater_corundum} / {@code tunnel_heater_corundum_on}。
+     * 模型文件是照着普通版复制的，UV 一字未改，所以两者外观几何完全一致。
+     *
+     * <p>因为共用 {@code TunnelHeaterBlockEntity}，两种加热器挨在一起时会算作同一组、
+     * 共用一个电池（{@code collectGroup} 只认方块实体类型，不认方块类型）。
+     */
+    public static final BlockEntry<TunnelHeaterBlock> TUNNEL_HEATER_CORUNDUM = REGISTRATE.block("tunnel_heater_corundum", TunnelHeaterBlock::new)
+            .initialProperties(SharedProperties::stone)
+            .properties(p -> p.noOcclusion().mapColor(MapColor.PODZOL))
+            .transform(TagGen.axeOrPickaxe())
+            .item(TunnelHeaterItem::new)
             .build()
             .register();
 

@@ -2,6 +2,7 @@ package net.chauvedev.woodencog.block.tunnelheater;
 
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.content.kinetics.belt.BeltBlock;
+import com.simibubi.create.content.kinetics.belt.BeltBlockEntity;
 import com.simibubi.create.content.kinetics.belt.BeltSlope;
 import com.simibubi.create.foundation.block.IBE;
 import net.chauvedev.woodencog.block.WoodencogBlockEntityTypes;
@@ -322,6 +323,48 @@ public class TunnelHeaterBlock extends Block implements IBE<TunnelHeaterBlockEnt
         // a block placed or broken beside this one can change the group of this one as well: every
         // member of the group is told to look its group up again, not just the neighbour that changed.
         TunnelHeaterBlockEntity.invalidateGroupsAround(level, pos);
+
+        // ★ 2026-11-01: 把下方带子的「被遮挡」标记清掉，见 clearBeltCovered。
+        clearBeltCovered(level, pos);
+    }
+
+    /**
+     * 清除下方带子的 {@code covered} 标记，让它不要画那一圈「封装传送带的支撑」。
+     *
+     * <p>★ 为什么需要这个：Create 的 {@code BeltBlock#updateCoverProperty} 每帧读上方方块，
+     * 调 {@code BeltBlock.isBlockCoveringBelt} 判断带子是否被盖住，盖住就
+     * {@code BeltBlockEntity#setCovered(true)}，于是带子渲染时多画一层
+     * {@code create:block/belt_casing/...}（几何 {@code from=[0,0,0] to=[16,11,16]}），
+     * 也就是玩家看到的那圈支撑。
+     *
+     * <p>那个判定的原话是：上方方块的碰撞箱不能为空、必须跨过 {@code y=0.5}、必须从
+     * {@code x=0} 或 {@code z=0} 贴边开始，再排除掉漏斗、传动轴等一串白名单。黄铜隧道之所以
+     * 不触发，是因为它的碰撞箱中间那块缩在 {@code x:0.125..0.875}，四面不贴边；而隧道加热炉
+     * 的碰撞箱是四面贴边的一圈墙（{@code minX=0, maxX=1}），判出来是 {@code true}。
+     *
+     * <p>我们不想为了这个去改碰撞箱（那会改变玩家的碰撞手感），所以在方块这一侧直接把它压回去。
+     * {@code covered} 和 {@code setCovered} 都是 {@code BeltBlockEntity} 的公开成员，
+     * 不需要 mixin。
+     *
+     * <p>调用时机有两处，因为 Create 会在这些时候重新判定：放置加热炉时、以及任何邻居变化时
+     * （带子被推动、被换向、旁边放了东西都会触发）。两边都压一次，玩家看到的就是干净的机壳。
+     */
+    public static void clearBeltCovered(Level level, BlockPos pos) {
+        if (level.isClientSide) {
+            return;
+        }
+        if (!(level.getBlockEntity(pos.below()) instanceof BeltBlockEntity belt)) {
+            return;
+        }
+        if (belt.covered) {
+            belt.setCovered(false);
+        }
+    }
+
+    @Override
+    public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
+        // 放下的一瞬间就把支撑压掉，不然要等第一次邻居变化才干净。
+        clearBeltCovered(level, pos);
     }
 
     @Override

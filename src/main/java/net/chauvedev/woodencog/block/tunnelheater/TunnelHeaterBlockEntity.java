@@ -441,6 +441,13 @@ public class TunnelHeaterBlockEntity extends SmartBlockEntity implements IAirHea
             return;
         }
 
+        // ★ 2026-11-01: 兜底把下方带子的「支撑」标记压掉。
+        //   onPlace / neighborChanged 覆盖不到的情况是：带子本来就封装过（casing 不是 NONE），
+        //   玩家再把加热炉放上去——那条路径不会重走我们的放置钩子，而 Create 的
+        //   updateCoverProperty 会把 covered 判成 true，于是带子多画一圈支撑。
+        //   每 tick 一次，成本只有一次方块实体查找，且只在 covered 为 true 时才写。
+        net.chauvedev.woodencog.block.tunnelheater.TunnelHeaterBlock.clearBeltCovered(this.level, this.worldPosition);
+
         TunnelHeaterMode mode = this.groupMode();
 
         if (this.level.isClientSide) {

@@ -45,6 +45,8 @@ public class WoodencogBlockEntityTypes {
     // IBE#getTicker hands it Create's SmartBlockEntityTicker and tick() runs without anything else here.
     public static final BlockEntityEntry<TunnelHeaterBlockEntity> TUNNEL_HEATER = REGISTRATE
         .blockEntity("tunnel_heater", TunnelHeaterBlockEntity::new)
-        .validBlocks(WoodencogBlocks.TUNNEL_HEATER)
+        // 刚玉版共用这一个方块实体类型：两种加热器是同一个类、同一套行为，只有贴图不同。
+        // 副作用是相邻的两种加热器会被算进同一组、共用一个电池（collectGroup 只看方块实体类型）。
+        .validBlocks(WoodencogBlocks.TUNNEL_HEATER, WoodencogBlocks.TUNNEL_HEATER_CORUNDUM)
         .register();
 }

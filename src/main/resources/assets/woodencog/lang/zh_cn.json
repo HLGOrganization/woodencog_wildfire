@@ -1,6 +1,7 @@
 {
   "block.woodencog.hot_air_chamber": "气流加热器",
   "block.woodencog.tunnel_heater": "隧道加热炉",
+  "block.woodencog.tunnel_heater_corundum": "隧道加热炉（刚玉）",
 
   "woodencog.tunnel_heater.mode": "隧道加热炉模式",
   "woodencog.tunnel_heater.mode.heat": "加热：物品照常通过，加热到焊接温度 ×1.2",

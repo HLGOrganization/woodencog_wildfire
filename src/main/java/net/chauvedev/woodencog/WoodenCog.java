@@ -78,6 +78,7 @@ public class WoodenCog {
             event.accept(WoodencogBlocks.WOODEN_GENERATOR.get());
             event.accept(WoodencogBlocks.HOT_AIR_CHAMBER.get());
             event.accept(WoodencogBlocks.TUNNEL_HEATER.get());
+            event.accept(WoodencogBlocks.TUNNEL_HEATER_CORUNDUM.get());
         }
     }
 

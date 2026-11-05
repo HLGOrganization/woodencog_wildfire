@@ -6,6 +6,7 @@ import com.simibubi.create.content.kinetics.transmission.SplitShaftVisual;
 import com.simibubi.create.foundation.data.CreateRegistrate;
 import com.tterrag.registrate.util.entry.BlockEntityEntry;
 import net.chauvedev.woodencog.WoodenCog;
+import net.chauvedev.woodencog.block.electricstove.ElectricStoveBlockEntity;
 import net.chauvedev.woodencog.block.generator.WoodenGeneratorBlockEntity;
 import net.chauvedev.woodencog.block.generator.WoodenGeneratorRenderer;
 import net.chauvedev.woodencog.block.hotairchamber.HotAirChamberBlockEntity;
@@ -48,5 +49,14 @@ public class WoodencogBlockEntityTypes {
         // 刚玉版共用这一个方块实体类型：两种加热器是同一个类、同一套行为，只有贴图不同。
         // 副作用是相邻的两种加热器会被算进同一组、共用一个电池（collectGroup 只看方块实体类型）。
         .validBlocks(WoodencogBlocks.TUNNEL_HEATER, WoodencogBlocks.TUNNEL_HEATER_CORUNDUM)
+        .register();
+
+    /**
+     * 电磁炉。也是 plain SmartBlockEntity，没有 visual 也没有 renderer：
+     * 外观走手写的 blockstate + 模型，数值框走 Create 的 ScrollValueBehaviour，两样都不需要 BER。
+     */
+    public static final BlockEntityEntry<ElectricStoveBlockEntity> ELECTRIC_STOVE = REGISTRATE
+        .blockEntity("electric_stove", ElectricStoveBlockEntity::new)
+        .validBlocks(WoodencogBlocks.ELECTRIC_STOVE)
         .register();
 }

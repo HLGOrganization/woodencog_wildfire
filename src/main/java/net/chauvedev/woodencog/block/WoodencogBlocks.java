@@ -5,6 +5,7 @@ import com.simibubi.create.foundation.item.ItemDescription;
 import com.simibubi.create.foundation.item.TooltipModifier;
 import com.tterrag.registrate.util.entry.BlockEntry;
 import net.chauvedev.woodencog.WoodenCog;
+import net.chauvedev.woodencog.block.electricstove.ElectricStoveBlock;
 import net.chauvedev.woodencog.block.generator.WoodenGeneratorBlock;
 import net.chauvedev.woodencog.block.hotairchamber.HotAirChamberBlock;
 import net.chauvedev.woodencog.block.transformer.CTTransformerBlock;
@@ -84,6 +85,28 @@ public class WoodencogBlocks {
             .properties(p -> p.noOcclusion().mapColor(MapColor.PODZOL))
             .transform(TagGen.axeOrPickaxe())
             .item(TunnelHeaterItem::new)
+            .build()
+            .register();
+
+    /**
+     * 电磁炉（2026-11-03）。
+     *
+     * <p>外形照搬 {@code moreburners:electric_burner}，但要自己做参数：温度 1~2000 可调
+     * （装高温升级件后到 2500），温度越高耗电越快（二次方）。详见
+     * {@link ElectricStoveBlockEntity}。
+     *
+     * <p>没有 blockstate 生成器：模型、blockstate、item 模型都是手写的，放在
+     * {@code assets/woodencog/blockstates/electric_stove.json} 等位置，和
+     * {@code hot_air_chamber} 一样的手工资源路线。
+     *
+     * <p>{@code noOcclusion()} 是必需的：顶盖只到 16/16 但模型内部有空腔，
+     * 不加的话相邻方块的面会被剔掉。
+     */
+    public static final BlockEntry<ElectricStoveBlock> ELECTRIC_STOVE = REGISTRATE.block("electric_stove", ElectricStoveBlock::new)
+            .initialProperties(SharedProperties::stone)
+            .properties(p -> p.noOcclusion().mapColor(MapColor.TERRACOTTA_ORANGE))
+            .transform(TagGen.pickaxeOnly())
+            .item()
             .build()
             .register();
 

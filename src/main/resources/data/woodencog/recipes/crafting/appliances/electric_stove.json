@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CRC",
+    "RTR",
+    "CNC"
+  ],
+  "key": {
+    "C": {
+      "tag": "forge:plates/copper"
+    },
+    "R": {
+      "item": "create:brass_casing"
+    },
+    "T": {
+      "item": "create:fluid_tank"
+    },
+    "N": {
+      "tag": "forge:double_ingots/nickel"
+    }
+  },
+  "result": {
+    "item": "woodencog:electric_stove"
+  }
+}

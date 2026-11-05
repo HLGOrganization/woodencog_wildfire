@@ -10,6 +10,7 @@
   "block.woodencog.hot_air_chamber": "Airflow Heater",
   "block.woodencog.tunnel_heater": "Tunnel Heater",
   "block.woodencog.tunnel_heater_corundum": "Tunnel Heater (Corundum)",
+  "block.woodencog.electric_stove": "Electric Stove",
 
   "category.woodencog.heated_mixing": "Heated Mixing",
   "category.woodencog.heated_pressing": "Heated Pressing",
@@ -43,6 +44,12 @@
   "woodencog.tunnel_heater.mode.heat": "Heat: items pass straight through, heated up to welding temperature x1.2",
   "woodencog.tunnel_heater.mode.workable": "Heat to workable: hold items until they can be worked",
   "woodencog.tunnel_heater.mode.weldable": "Heat to weldable: hold items until they can be welded",
+
+  "woodencog.electric_stove.temperature": "Temperature",
+  "item.woodencog.electric_stove_upgrade": "Electric Stove Heat Upgrade",
+  "woodencog.electric_stove.upgrade.tip": "Fits on an Electric Stove, raising its limit from %s °C to %s °C",
+  "woodencog.electric_stove.upgraded": "Upgraded: limit %s °C",
+  "woodencog.electric_stove.already_upgraded": "This Electric Stove is already upgraded",
 
   "recipe.assembly.pressing": "Assembly Pressing"
 }

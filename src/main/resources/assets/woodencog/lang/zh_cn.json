@@ -2,9 +2,16 @@
   "block.woodencog.hot_air_chamber": "气流加热器",
   "block.woodencog.tunnel_heater": "隧道加热炉",
   "block.woodencog.tunnel_heater_corundum": "隧道加热炉（刚玉）",
+  "block.woodencog.electric_stove": "电磁炉",
 
   "woodencog.tunnel_heater.mode": "隧道加热炉模式",
   "woodencog.tunnel_heater.mode.heat": "加热：物品照常通过，加热到焊接温度 ×1.2",
   "woodencog.tunnel_heater.mode.workable": "加热至可加工：拦住物品，直到可以加工",
-  "woodencog.tunnel_heater.mode.weldable": "加热至可焊接：拦住物品，直到可以焊接"
+  "woodencog.tunnel_heater.mode.weldable": "加热至可焊接：拦住物品，直到可以焊接",
+
+  "woodencog.electric_stove.temperature": "温度",
+  "item.woodencog.electric_stove_upgrade": "电磁炉高温升级件",
+  "woodencog.electric_stove.upgrade.tip": "装到电磁炉上，温度上限从 %s °C 提高到 %s °C",
+  "woodencog.electric_stove.upgraded": "已升级：温度上限 %s °C",
+  "woodencog.electric_stove.already_upgraded": "这台电磁炉已经装过升级件了"
 }

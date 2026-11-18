@@ -88,10 +88,10 @@ public class StoveTemperatureBehaviour extends ScrollValueBehaviour {
      *
      * <p>所以这里把面板改成 <b>0 ~ (max-min)</b> 的相对刻度，
      * 再在 {@link #setValueSettings} 里加上 min 映射回真实刻度。
-     * 两种状态都是 150 格，条一样长：
+     * 两种状态都是 200 格（2026-11-12 上调上限后）：
      * <pre>
-     *   未升级：面板 0~150  ⇒ 真实 50~200 刻度 ⇒ 500~2000 °C
-     *   升级后：面板 0~150  ⇒ 真实 100~250 刻度 ⇒ 1000~2500 °C
+     *   未升级：面板 0~200  ⇒ 真实 50~250 刻度 ⇒ 500~2500 °C
+     *   升级后：面板 0~200  ⇒ 真实 100~300 刻度 ⇒ 1000~3000 °C
      * </pre>
      */
     @Override

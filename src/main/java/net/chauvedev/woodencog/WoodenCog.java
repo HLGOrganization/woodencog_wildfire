@@ -48,6 +48,7 @@ public class WoodenCog {
         WoodenCogCommonConfigs.register(ctx);
 
         WoodencogItems.register(modEventBus);
+        // 弓的全套（网络包 / 配方序列化器 / 物品）已于 2026-11-17 迁到野火核心 Wildfires。
         WoodencogBlocks.register();
         WoodencogBlockEntityTypes.register();
 
@@ -87,6 +88,8 @@ public class WoodenCog {
         BlockEntityRenderers.register(WoodencogBlockEntityTypes.WOODEN_GENERATOR.get(), WoodenGeneratorRenderer::new);
 
         PonderIndex.addPlugin(new WoodenCogPonderPlugin());
+
+        // 弓臂的贴图切换谓词已随弓全套迁到野火核心（Wildfires），见那边的 ClientModEvent。
     }
 
     public static ResourceLocation asResource(String path) {

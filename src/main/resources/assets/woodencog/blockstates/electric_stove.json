@@ -1,304 +1,276 @@
 {
-  "variants": {
-    "blaze=none,facing=north,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove"
+  "multipart": [
+    {
+      "when": { "tier": "0", "facing": "north" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier0" }
+    },
+    {
+      "when": { "tier": "0", "facing": "east" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier0", "y": 90 }
+    },
+    {
+      "when": { "tier": "0", "facing": "south" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier0", "y": 180 }
+    },
+    {
+      "when": { "tier": "0", "facing": "west" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier0", "y": 270 }
+    },
+    {
+      "when": { "tier": "1", "facing": "north" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier1" }
+    },
+    {
+      "when": { "tier": "1", "facing": "east" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier1", "y": 90 }
+    },
+    {
+      "when": { "tier": "1", "facing": "south" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier1", "y": 180 }
+    },
+    {
+      "when": { "tier": "1", "facing": "west" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier1", "y": 270 }
+    },
+    {
+      "when": { "tier": "2", "facing": "north" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier2" }
+    },
+    {
+      "when": { "tier": "2", "facing": "east" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier2", "y": 90 }
+    },
+    {
+      "when": { "tier": "2", "facing": "south" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier2", "y": 180 }
+    },
+    {
+      "when": { "tier": "2", "facing": "west" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier2", "y": 270 }
+    },
+    {
+      "when": { "tier": "3", "facing": "north" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier3" }
+    },
+    {
+      "when": { "tier": "3", "facing": "east" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier3", "y": 90 }
+    },
+    {
+      "when": { "tier": "3", "facing": "south" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier3", "y": 180 }
+    },
+    {
+      "when": { "tier": "3", "facing": "west" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier3", "y": 270 }
+    },
+    {
+      "when": { "tier": "4", "facing": "north" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier4" }
+    },
+    {
+      "when": { "tier": "4", "facing": "east" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier4", "y": 90 }
+    },
+    {
+      "when": { "tier": "4", "facing": "south" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier4", "y": 180 }
+    },
+    {
+      "when": { "tier": "4", "facing": "west" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier4", "y": 270 }
+    },
+    {
+      "when": { "tier": "5", "facing": "north" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier5" }
+    },
+    {
+      "when": { "tier": "5", "facing": "east" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier5", "y": 90 }
+    },
+    {
+      "when": { "tier": "5", "facing": "south" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier5", "y": 180 }
+    },
+    {
+      "when": { "tier": "5", "facing": "west" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier5", "y": 270 }
+    },
+    {
+      "when": { "tier": "6", "facing": "north" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier6" }
+    },
+    {
+      "when": { "tier": "6", "facing": "east" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier6", "y": 90 }
     },
-    "blaze=none,facing=north,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_upgraded"
+    {
+      "when": { "tier": "6", "facing": "south" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier6", "y": 180 }
     },
-    "blaze=none,facing=north,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove"
+    {
+      "when": { "tier": "6", "facing": "west" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier6", "y": 270 }
     },
-    "blaze=none,facing=north,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_upgraded"
+    {
+      "when": { "tier": "7", "facing": "north" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier7" }
     },
-    "blaze=none,facing=east,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove",
-      "y": 90
+    {
+      "when": { "tier": "7", "facing": "east" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier7", "y": 90 }
     },
-    "blaze=none,facing=east,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_upgraded",
-      "y": 90
+    {
+      "when": { "tier": "7", "facing": "south" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier7", "y": 180 }
     },
-    "blaze=none,facing=east,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove",
-      "y": 90
+    {
+      "when": { "tier": "7", "facing": "west" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier7", "y": 270 }
     },
-    "blaze=none,facing=east,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_upgraded",
-      "y": 90
+    {
+      "when": { "tier": "8", "facing": "north" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier8" }
     },
-    "blaze=none,facing=south,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove",
-      "y": 180
+    {
+      "when": { "tier": "8", "facing": "east" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier8", "y": 90 }
     },
-    "blaze=none,facing=south,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_upgraded",
-      "y": 180
+    {
+      "when": { "tier": "8", "facing": "south" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier8", "y": 180 }
     },
-    "blaze=none,facing=south,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove",
-      "y": 180
+    {
+      "when": { "tier": "8", "facing": "west" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_tier8", "y": 270 }
     },
-    "blaze=none,facing=south,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_upgraded",
-      "y": 180
+    {
+      "when": { "ports": "1" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port" }
     },
-    "blaze=none,facing=west,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove",
-      "y": 270
+    {
+      "when": { "ports": "3" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port" }
     },
-    "blaze=none,facing=west,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_upgraded",
-      "y": 270
+    {
+      "when": { "ports": "5" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port" }
     },
-    "blaze=none,facing=west,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove",
-      "y": 270
+    {
+      "when": { "ports": "7" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port" }
     },
-    "blaze=none,facing=west,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_upgraded",
-      "y": 270
+    {
+      "when": { "ports": "9" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port" }
     },
-    "blaze=smouldering,facing=north,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove"
+    {
+      "when": { "ports": "11" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port" }
     },
-    "blaze=smouldering,facing=north,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_upgraded"
+    {
+      "when": { "ports": "13" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port" }
     },
-    "blaze=smouldering,facing=north,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove"
+    {
+      "when": { "ports": "15" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port" }
     },
-    "blaze=smouldering,facing=north,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_upgraded"
+    {
+      "when": { "ports": "2" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 180 }
     },
-    "blaze=smouldering,facing=east,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove",
-      "y": 90
+    {
+      "when": { "ports": "3" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 180 }
     },
-    "blaze=smouldering,facing=east,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_upgraded",
-      "y": 90
+    {
+      "when": { "ports": "6" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 180 }
     },
-    "blaze=smouldering,facing=east,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove",
-      "y": 90
+    {
+      "when": { "ports": "7" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 180 }
     },
-    "blaze=smouldering,facing=east,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_upgraded",
-      "y": 90
+    {
+      "when": { "ports": "10" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 180 }
     },
-    "blaze=smouldering,facing=south,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove",
-      "y": 180
+    {
+      "when": { "ports": "11" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 180 }
     },
-    "blaze=smouldering,facing=south,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_upgraded",
-      "y": 180
+    {
+      "when": { "ports": "14" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 180 }
     },
-    "blaze=smouldering,facing=south,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove",
-      "y": 180
+    {
+      "when": { "ports": "15" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 180 }
     },
-    "blaze=smouldering,facing=south,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_upgraded",
-      "y": 180
+    {
+      "when": { "ports": "4" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 270 }
     },
-    "blaze=smouldering,facing=west,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove",
-      "y": 270
+    {
+      "when": { "ports": "5" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 270 }
     },
-    "blaze=smouldering,facing=west,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_upgraded",
-      "y": 270
+    {
+      "when": { "ports": "6" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 270 }
     },
-    "blaze=smouldering,facing=west,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove",
-      "y": 270
+    {
+      "when": { "ports": "7" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 270 }
     },
-    "blaze=smouldering,facing=west,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_upgraded",
-      "y": 270
+    {
+      "when": { "ports": "12" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 270 }
     },
-    "blaze=fading,facing=north,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled"
+    {
+      "when": { "ports": "13" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 270 }
     },
-    "blaze=fading,facing=north,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled_upgraded"
+    {
+      "when": { "ports": "14" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 270 }
     },
-    "blaze=fading,facing=north,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled"
+    {
+      "when": { "ports": "15" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 270 }
     },
-    "blaze=fading,facing=north,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled_upgraded"
+    {
+      "when": { "ports": "8" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 90 }
     },
-    "blaze=fading,facing=east,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled",
-      "y": 90
+    {
+      "when": { "ports": "9" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 90 }
     },
-    "blaze=fading,facing=east,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled_upgraded",
-      "y": 90
+    {
+      "when": { "ports": "10" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 90 }
     },
-    "blaze=fading,facing=east,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled",
-      "y": 90
+    {
+      "when": { "ports": "11" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 90 }
     },
-    "blaze=fading,facing=east,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled_upgraded",
-      "y": 90
+    {
+      "when": { "ports": "12" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 90 }
     },
-    "blaze=fading,facing=south,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled",
-      "y": 180
+    {
+      "when": { "ports": "13" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 90 }
     },
-    "blaze=fading,facing=south,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled_upgraded",
-      "y": 180
+    {
+      "when": { "ports": "14" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 90 }
     },
-    "blaze=fading,facing=south,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled",
-      "y": 180
-    },
-    "blaze=fading,facing=south,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled_upgraded",
-      "y": 180
-    },
-    "blaze=fading,facing=west,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled",
-      "y": 270
-    },
-    "blaze=fading,facing=west,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled_upgraded",
-      "y": 270
-    },
-    "blaze=fading,facing=west,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled",
-      "y": 270
-    },
-    "blaze=fading,facing=west,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled_upgraded",
-      "y": 270
-    },
-    "blaze=kindled,facing=north,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled"
-    },
-    "blaze=kindled,facing=north,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled_upgraded"
-    },
-    "blaze=kindled,facing=north,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled"
-    },
-    "blaze=kindled,facing=north,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled_upgraded"
-    },
-    "blaze=kindled,facing=east,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled",
-      "y": 90
-    },
-    "blaze=kindled,facing=east,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled_upgraded",
-      "y": 90
-    },
-    "blaze=kindled,facing=east,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled",
-      "y": 90
-    },
-    "blaze=kindled,facing=east,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled_upgraded",
-      "y": 90
-    },
-    "blaze=kindled,facing=south,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled",
-      "y": 180
-    },
-    "blaze=kindled,facing=south,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled_upgraded",
-      "y": 180
-    },
-    "blaze=kindled,facing=south,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled",
-      "y": 180
-    },
-    "blaze=kindled,facing=south,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled_upgraded",
-      "y": 180
-    },
-    "blaze=kindled,facing=west,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled",
-      "y": 270
-    },
-    "blaze=kindled,facing=west,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled_upgraded",
-      "y": 270
-    },
-    "blaze=kindled,facing=west,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled",
-      "y": 270
-    },
-    "blaze=kindled,facing=west,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_kindled_upgraded",
-      "y": 270
-    },
-    "blaze=seething,facing=north,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_seething"
-    },
-    "blaze=seething,facing=north,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_seething_upgraded"
-    },
-    "blaze=seething,facing=north,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_seething"
-    },
-    "blaze=seething,facing=north,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_seething_upgraded"
-    },
-    "blaze=seething,facing=east,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_seething",
-      "y": 90
-    },
-    "blaze=seething,facing=east,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_seething_upgraded",
-      "y": 90
-    },
-    "blaze=seething,facing=east,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_seething",
-      "y": 90
-    },
-    "blaze=seething,facing=east,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_seething_upgraded",
-      "y": 90
-    },
-    "blaze=seething,facing=south,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_seething",
-      "y": 180
-    },
-    "blaze=seething,facing=south,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_seething_upgraded",
-      "y": 180
-    },
-    "blaze=seething,facing=south,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_seething",
-      "y": 180
-    },
-    "blaze=seething,facing=south,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_seething_upgraded",
-      "y": 180
-    },
-    "blaze=seething,facing=west,powered=false,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_seething",
-      "y": 270
-    },
-    "blaze=seething,facing=west,powered=false,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_seething_upgraded",
-      "y": 270
-    },
-    "blaze=seething,facing=west,powered=true,upgraded=false": {
-      "model": "woodencog:block/electric_stove/electric_stove_seething",
-      "y": 270
-    },
-    "blaze=seething,facing=west,powered=true,upgraded=true": {
-      "model": "woodencog:block/electric_stove/electric_stove_seething_upgraded",
-      "y": 270
+    {
+      "when": { "ports": "15" },
+      "apply": { "model": "woodencog:block/electric_stove/resistance_furnace_port", "y": 90 }
     }
-  }
+  ]
 }

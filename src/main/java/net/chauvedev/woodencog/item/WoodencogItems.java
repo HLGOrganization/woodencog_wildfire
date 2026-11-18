@@ -20,6 +20,17 @@ public class WoodencogItems {
         () -> new ElectricStoveUpgradeItem(new Item.Properties().stacksTo(16))
     );
 
+    /**
+     * 弓臂（全程一个物品，用 NBT 阶段区分）。
+     *
+     * <p>★★ 2026-11-17 <b>整个弓的代码已迁到野火核心（Wildfires 工程）</b>，
+     * 老大原话「我们把弓的代码都放进野火核心里面」。
+     *
+     * <p>所以这里<b>不再注册</b> bow_arm / bow_string / bow 三件物品，
+     * 改由 {@code first.wildfires.register.BowRegister} 负责。
+     * 原来这三个 {@code RegistryObject} 已删除，避免两个模组注册同名物品。
+     */
+
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
 

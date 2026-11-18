@@ -6,7 +6,13 @@ import com.simibubi.create.foundation.block.IBE;
 import net.chauvedev.woodencog.block.WoodencogBlockEntityTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -21,9 +27,12 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+
+import java.util.List;
 
 import javax.annotation.Nullable;
 
@@ -61,10 +70,56 @@ public class ElectricStoveBlock extends BaseEntityBlock implements IWrenchable, 
     /** 朝向。数值面板挂在正面。 */
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
 
-    /** 形状：跟电动燃烧器一样，底部 2/16 起、到 14/16，外加顶盖。 */
+    /**
+     * 接线面位掩码：第 0/1/2/3 位 = 北/南/西/东 是否接了电线。
+     *
+     * <h2>为什么放进方块状态（而不是 ModelData）</h2>
+     *
+     * <p>本鲸一开始想走 Forge 的 {@code ModelData}，但<b>那是给带 {@code BakedModel} 的
+     * 方块实体模型用的</b>；本方块是 {@link RenderShape#MODEL} 的普通 JSON 模型，
+     * 根本不会去问 {@code getModelData}。走了那条路等于什么都没发生。
+     *
+     * <p>放进方块状态的代价：接线变化时要刷一次 {@code setBlock}。
+     * 但接线变化本来就是低频事件（玩家拉线/拆线），比每帧查能力便宜得多。
+     *
+     * <p>★ 用 {@code setBlock(..., 2)} 而不是 {@code setBlockAndUpdate}，
+     * 原因见 {@link ElectricStoveBlockEntity#updateHeatLevel()} 的注释 ——
+     * flag 3 会重建方块实体，把温度清零。
+     */
+    public static final IntegerProperty PORTS = IntegerProperty.create("ports", 0, 15);
+
+    /**
+     * 贴图档位，<b>0~8 共 9 档</b>。
+     *
+     * <h2>★ 为什么不能直接扩展 {@link #HEAT_LEVEL}</h2>
+     *
+     * <p>{@code HEAT_LEVEL} 是 Create 的 {@code BlazeBurnerBlock.HEAT_LEVEL}，
+     * 类型是 {@code EnumProperty<HeatLevel>}，枚举只有 5 个值
+     * （NONE / SMOULDERING / FADING / KINDLED / SEETHING）——
+     * <b>想加也加不了，那是别人的枚举</b>。
+     *
+     * <p>而且那 5 档是给鼓风机、大锅、传送带焊接读的，语义不能乱改。
+     *
+     * <p>所以贴图单独开一个 {@code IntegerProperty}：
+     * <ul>
+     *   <li>{@code HEAT_LEVEL} —— 继续给 Create 用，5 档不变</li>
+     *   <li>{@code TIER} —— 只管贴图，1 档一张，9 张图全能用上</li>
+     * </ul>
+     *
+     * <p>分档依据见 {@link ElectricStoveBlockEntity#tierFor(double)}：
+     * 照搬木炭灶的每 266.67 度一档，最后两档按电阻炉的上限调整（档 8 = 2300 度以上）。
+     */
+    public static final IntegerProperty TIER = IntegerProperty.create("tier", 0, 8);
+
+    /**
+     * 形状：底座 + 主体。
+     *
+     * <p>★ 2026-11-17 老大反馈「碰撞体积要往上多 3 像素」：
+     * 主体上沿从 12/16 抬到 <b>15/16</b>，和模型里的顶盖（{@code to [14.5, 14.4, 14.5]}）对齐。
+     */
     private static final VoxelShape SHAPE = Shapes.or(
-        Block.box(2.0D, 0.0D, 2.0D, 14.0D, 3.0D, 14.0D),   // 底座
-        Block.box(1.0D, 3.0D, 1.0D, 15.0D, 12.0D, 15.0D)    // 主体
+        Block.box(2.0D, 0.0D, 2.0D, 14.0D, 3.0D, 14.0D),    // 底座
+        Block.box(1.0D, 3.0D, 1.0D, 15.0D, 15.0D, 15.0D)    // 主体（上沿 12 → 15）
     );
 
     public ElectricStoveBlock(Properties properties) {
@@ -73,12 +128,14 @@ public class ElectricStoveBlock extends BaseEntityBlock implements IWrenchable, 
             .setValue(HEAT_LEVEL, BlazeBurnerBlock.HeatLevel.NONE)
             .setValue(UPGRADED, Boolean.FALSE)
             .setValue(POWERED, Boolean.FALSE)
-            .setValue(FACING, Direction.NORTH));
+            .setValue(FACING, Direction.NORTH)
+            .setValue(PORTS, 0)
+            .setValue(TIER, 0));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(HEAT_LEVEL, UPGRADED, POWERED, FACING);
+        builder.add(HEAT_LEVEL, UPGRADED, POWERED, FACING, PORTS, TIER);
     }
 
     @Override
@@ -99,6 +156,76 @@ public class ElectricStoveBlock extends BaseEntityBlock implements IWrenchable, 
         return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
     }
 
+    /**
+     * 放下方块后：从相邻的电阻炉校准温度和红石状态。
+     *
+     * <p>老大 2026-11-17 要求：「刚放下的电阻炉应该自动被旁边的电阻炉校准温度，
+     * 红石信号也要跟着传播」。
+     *
+     * <p>★ 用 {@code setPlacedBy} 而不是 {@code onPlace}：
+     * {@code setPlacedBy} 时方块实体已经建好、能拿到 {@link ElectricStoveBlockEntity}；
+     * {@code onPlace} 依赖 {@code level.setBlock} 的返回值，时机更早，BE 可能还是 null。
+     */
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
+                            @Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (level.isClientSide) {
+            return;
+        }
+        if (level.getBlockEntity(pos) instanceof ElectricStoveBlockEntity stove) {
+            stove.calibrateFromNeighbours();
+        }
+
+        // ★★ 2026-11-17 修「放下第三格炉子，前面的炉子才识别到上一个的链接状态」：
+        //
+        //   病因：新炉子放下时自己的 PORTS 还是默认 0（放下的那个瞬间
+        //   StovePorts.mask 还没算过）。而下一次放第三方块时，
+        //   「刷新邻居」那段才把它补上 —— 于是看起来"晚一格"。
+        //
+        //   修法：放下的<b>同一时刻</b>，把「自己 + 四个邻居」全部重算一遍。
+        //   早先只刷了邻居、漏了自己。
+        //
+        // ★ 红石也要在这个同一时刻算好，否则后面单独 setBlock 一次会把 PORTS 覆盖掉。
+        //   所以合并成一次写入。
+        int ports = StovePorts.mask(level, pos);
+        boolean signal = level.hasNeighborSignal(pos);
+        if (!signal) {
+            for (Direction dir : Direction.Plane.HORIZONTAL) {
+                ElectricStoveBlockEntity other = StoveGroup.beAt(level, pos.relative(dir));
+                if (other != null && other.getBlockState().getValue(POWERED)) {
+                    signal = true;
+                    break;
+                }
+            }
+        }
+        BlockState current = level.getBlockState(pos);
+        if (current.getBlock() instanceof ElectricStoveBlock) {
+            BlockState next = current
+                .setValue(PORTS, ports)
+                .setValue(POWERED, signal);
+            if (next != current) {
+                level.setBlock(pos, next, 2);
+            }
+        }
+
+        // 邻居的接口板也要跟着变（新炉子算「接上了」的那一面）
+        for (Direction dir : Direction.Plane.HORIZONTAL) {
+            refreshPortsAt(level, pos.relative(dir));
+        }
+    }
+
+    private static void refreshPortsAt(Level level, BlockPos p) {
+        BlockState state = level.getBlockState(p);
+        if (!(state.getBlock() instanceof ElectricStoveBlock) || !state.hasProperty(PORTS)) {
+            return;
+        }
+        int ports = StovePorts.mask(level, p);
+        if (ports != state.getValue(PORTS)) {
+            level.setBlock(p, state.setValue(PORTS, ports), 2);
+        }
+    }
+
     @Override
     @SuppressWarnings("deprecation")
     public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block,
@@ -107,15 +234,91 @@ public class ElectricStoveBlock extends BaseEntityBlock implements IWrenchable, 
         if (level.isClientSide) {
             return;
         }
-        boolean powered = level.hasNeighborSignal(pos);
-        if (powered != state.getValue(POWERED)) {
-            level.setBlockAndUpdate(pos, state.setValue(POWERED, powered));
+
+        // ── 红石：自己和相邻炉子的信号合成一个「组信号」 ──
+        // 老大 2026-11-17 要求红石也要在炉子之间传播：
+        // 任意一台通电，整组都算通电（因为它们是共用一份电的）。
+        boolean signal = level.hasNeighborSignal(pos);
+        if (!signal) {
+            for (Direction dir : Direction.Plane.HORIZONTAL) {
+                ElectricStoveBlockEntity other = StoveGroup.beAt(level, pos.relative(dir));
+                if (other != null && other.getBlockState().getValue(POWERED)) {
+                    signal = true;
+                    break;
+                }
+            }
+        }
+
+        BlockState next = state;
+        if (signal != state.getValue(POWERED)) {
+            next = next.setValue(POWERED, signal);
+        }
+        // 邻居变了 ⇒ 可能有人拉线过来或拆线，重算接口板。
+        int ports = StovePorts.mask(level, pos);
+        if (ports != state.getValue(PORTS)) {
+            next = next.setValue(PORTS, ports);
+        }
+        if (next != state) {
+            // flag 2 = 只通知客户端渲染，不重建方块实体（否则温度会被清零）。
+            level.setBlock(pos, next, 2);
+        }
+
+        // ── 把红石变化传出去，让相邻炉子也刷新 ──
+        //
+        // ★ 这里不能直接调 level.neighborChanged(...)：
+        //   相邻炉子的 neighborChanged 里又会往回通知我，两个炉子会无限互相调用。
+        //   改用「组内全员重算一次」—— 每个炉子只改自己的方块状态，靠 setBlock(flag 2)
+        //   让客户端刷新；flag 2 不会反过来触发 neighborChanged（只有 flag 1/3 才更新邻居）。
+        if (next != state) {
+            List<ElectricStoveBlockEntity> group = StoveGroup.collect(level, pos);
+            boolean groupSignal = signal;
+            for (ElectricStoveBlockEntity be : group) {
+                if (be == null || be.getBlockPos().equals(pos)) {
+                    continue;
+                }
+                BlockState bs = be.getBlockState();
+                if (bs.getValue(POWERED) != groupSignal) {
+                    level.setBlock(be.getBlockPos(), bs.setValue(POWERED, groupSignal), 2);
+                }
+            }
         }
     }
 
     @Override
     public Class<ElectricStoveBlockEntity> getBlockEntityClass() {
         return ElectricStoveBlockEntity.class;
+    }
+
+    /**
+     * 扳手右键：切换「独立 / 加入相邻组」。
+     *
+     * <p>2026-11-17 老大定：相邻的电阻炉默认共享电量与温度；
+     * 扳手右键把它拆出去（它自己独立，<b>其余的还是共享</b>）；再右键一次加回去。
+     *
+     * <p>★ 只处理<b>服务端</b>：客户端也会被调用一次做预测，重复执行会切两次，等于没切。
+     */
+    @Override
+    public InteractionResult onWrenched(BlockState state, UseOnContext context) {
+        Level level = context.getLevel();
+        if (level.isClientSide) {
+            // 返回 SUCCESS 让客户端播拧扳手的动画和声音，但不动数据。
+            return InteractionResult.SUCCESS;
+        }
+        BlockEntity be = level.getBlockEntity(context.getClickedPos());
+        if (!(be instanceof ElectricStoveBlockEntity stove)) {
+            return InteractionResult.PASS;
+        }
+        boolean nowStandalone = stove.toggleStandalone();
+        Player player = context.getPlayer();
+        if (player != null) {
+            player.displayClientMessage(
+                Component.translatable(nowStandalone
+                    ? "woodencog.electric_stove.mode.standalone"
+                    : "woodencog.electric_stove.mode.shared"),
+                true
+            );
+        }
+        return InteractionResult.SUCCESS;
     }
 
     @Override

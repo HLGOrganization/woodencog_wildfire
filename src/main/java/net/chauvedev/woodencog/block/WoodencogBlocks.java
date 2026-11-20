@@ -104,7 +104,11 @@ public class WoodencogBlocks {
      */
     public static final BlockEntry<ElectricStoveBlock> ELECTRIC_STOVE = REGISTRATE.block("electric_stove", ElectricStoveBlock::new)
             .initialProperties(SharedProperties::stone)
-            .properties(p -> p.noOcclusion().mapColor(MapColor.TERRACOTTA_ORANGE))
+            .properties(p -> p.noOcclusion().mapColor(MapColor.TERRACOTTA_ORANGE)
+                    // ★ 2026-11-20 老大要求：「热量等级越高，亮度越高。最亮有火把那么亮。」
+                    //   光照必须由**方块状态**算（客户端烘区块时读不到方块实体），
+                    //   映射表见 ElectricStoveBlock#LIGHT_BY_TIER，顶档 14 = 火把。
+                    .lightLevel(ElectricStoveBlock::lightForState))
             .transform(TagGen.pickaxeOnly())
             .item()
             .build()

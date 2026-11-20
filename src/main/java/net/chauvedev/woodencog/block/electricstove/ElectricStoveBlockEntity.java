@@ -1,18 +1,25 @@
 package net.chauvedev.woodencog.block.electricstove;
 
+import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
 import com.simibubi.create.content.processing.burner.BlazeBurnerBlock;
 import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
 import com.simibubi.create.foundation.blockEntity.behaviour.CenteredSideValueBoxTransform;
 import com.simibubi.create.foundation.blockEntity.behaviour.ValueBoxTransform;
 import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.ScrollValueBehaviour;
+import com.simibubi.create.foundation.utility.CreateLang;
+import net.createmod.catnip.math.VecHelper;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
@@ -22,6 +29,7 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * 电阻炉（原电磁炉）的方块实体：存 Forge Energy、按玩家设定的温度加热、温度越高耗电越快。
@@ -59,9 +67,16 @@ import java.util.List;
  *   80 ~ 199       SMOULDERING
  *   200 ~ 339      FADING
  *   &gt;= 340        KINDLED
- *   且温度 &gt;= SEETHING_THRESHOLD(1000)  → SEETHING  超级加热
+ *   且温度 &gt;= SEETHING_THRESHOLD(2300)  → SEETHING  超级加热
  * </pre>
- * 换个说法：只要目标温度设到 340 以上、电也够，电阻炉就是个"炽热"热源；设到 1000 以上就是超级加热。
+ * 换个说法：只要目标温度设到 340 以上、电也够，电阻炉就是个"炽热"热源；设到 2300 以上就是超级加热。
+ *
+ * <p>★ 2026-11-20 注意：这段注释原来写的是「1000」，和 {@link #SEETHING_THRESHOLD} 的 2300 对不上
+ * （2026-11-17 已经把常量改成 2300，注释漏改了）。老大 11-20 反馈「2300 之后不算超级加热」，
+ * 本鲸把这条链路完整查了一遍：常量、{@code heatLevelFor}、{@code tierFor}、方块状态写入都是 2300，
+ * 反编译已安装的 jar 也确认字节码里是 {@code ldc2_w 2300.0d}。所以**代码这条链没问题**，
+ * 真正的原因要看运行时——为此加了 {@link #DEBUG_STOVE} 下的一行「跨过 2300」日志，
+ * 以及 {@link #isSuperheated()} 供 Jade / 调试读取。
  *
  * <h2>什么时候加热</h2>
  *
@@ -71,7 +86,7 @@ import java.util.List;
  * <p>实际温度向目标温度靠拢的速率是 {@link #HEATING_RATE} 度/tick（20 度/秒），
  * 所以从 0 烧到 3000 约需 150 秒；降温同样按 {@link #COOLING_RATE}。
  */
-public class ElectricStoveBlockEntity extends SmartBlockEntity {
+public class ElectricStoveBlockEntity extends SmartBlockEntity implements IHaveGoggleInformation {
 
     // ────────────────────────────────────────────────────────────────
     //  可调参数（数值都在这里，改这里就够了）
@@ -295,6 +310,7 @@ public class ElectricStoveBlockEntity extends SmartBlockEntity {
 
     /** 当前实际温度，向目标靠拢。 */
     private double currentTemperature = 0.0D;
+    private boolean sharedTemperatureDirty;
 
     /** 是否装了升级件。 */
     /**
@@ -590,10 +606,41 @@ public class ElectricStoveBlockEntity extends SmartBlockEntity {
             return;
         }
         if (level.isClientSide) {
-            // 客户端只等同步，不自己算。
+            if (!isVirtual()) {
+                spawnHeatingParticles();
+            }
             return;
         }
         this.tickServer();
+    }
+
+    private void spawnHeatingParticles() {
+        BlazeBurnerBlock.HeatLevel heat = BlazeBurnerBlock.getHeatLevelOf(getBlockState());
+        if (heat == BlazeBurnerBlock.HeatLevel.NONE) {
+            return;
+        }
+
+        RandomSource random = level.getRandom();
+        if (random.nextInt(4) != 0) {
+            return;
+        }
+
+        BlockPos above = worldPosition.above();
+        boolean openAbove = level.getBlockState(above).getCollisionShape(level, above).isEmpty();
+        Vec3 outlet = Vec3.atBottomCenterOf(above);
+        if (openAbove || random.nextInt(8) == 0) {
+            Vec3 smoke = outlet.add(VecHelper.offsetRandomly(Vec3.ZERO, random, 0.125F).multiply(1, 0, 1));
+            level.addParticle(ParticleTypes.LARGE_SMOKE, smoke.x, smoke.y, smoke.z, 0, 0, 0);
+        }
+
+        if (heat.isAtLeast(BlazeBurnerBlock.HeatLevel.FADING)) {
+            double riseSpeed = openAbove ? 0.0625D : random.nextDouble() * 0.0125D;
+            Vec3 direction = VecHelper.offsetRandomly(Vec3.ZERO, random, 0.5F).multiply(1, 0.25D, 1).normalize();
+            double radius = (openAbove ? 0.25D : 0.5D) + random.nextDouble() * 0.125D;
+            Vec3 flame = outlet.add(direction.scale(radius));
+            level.addParticle(heat == BlazeBurnerBlock.HeatLevel.SEETHING ? ParticleTypes.SOUL_FIRE_FLAME : ParticleTypes.FLAME,
+                flame.x, flame.y, flame.z, 0, riseSpeed, 0);
+        }
     }
 
     /**
@@ -729,10 +776,12 @@ public class ElectricStoveBlockEntity extends SmartBlockEntity {
 
         if (changed) {
             setChanged();
-            // 和组长一样，每秒同步一次给客户端（数值框、Jade、模型档位都读它）。
-            if (level != null && level.getGameTime() % 20L == 0L) {
-                sendData();
-            }
+            sharedTemperatureDirty = true;
+        }
+        // Send the last change even if the furnace has already settled by the next sync tick.
+        if (sharedTemperatureDirty && level != null && level.getGameTime() % 20L == 0L) {
+            sharedTemperatureDirty = false;
+            sendData();
         }
     }
 
@@ -962,6 +1011,22 @@ public class ElectricStoveBlockEntity extends SmartBlockEntity {
     }
 
     /**
+     * 现在是不是「超级加热」。
+     *
+     * <p>★ 2026-11-20 加：老大反馈「2300 度之后不算超级加热」。
+     * 这个判定在代码里只有一处真相（{@link #SEETHING_THRESHOLD}），
+     * 但判据散落在 {@link #heatLevelFor}、{@link #tierFor} 和方块状态里，
+     * 排查时容易只看一处就下结论。留这么个方法，Jade / 调试脚本 / 以后的改动都读它，
+     * 就不会再出现「三处各说各话」。
+     *
+     * <p>注意判据是<b>当前实际温度</b>，不是目标温度 ——
+     * 玩家把目标设到 2500 但还没烧上去时，这里应该是 false。
+     */
+    public boolean isSuperheated() {
+        return currentTemperature >= SEETHING_THRESHOLD;
+    }
+
+    /**
      * 当前温度对应的<b>贴图档位</b>（0~8，共 9 档）。
      *
      * <h2>2026-11-17 老大定：按木炭灶的级别</h2>
@@ -1030,6 +1095,19 @@ public class ElectricStoveBlockEntity extends SmartBlockEntity {
         if (want == lastHeatLevel && wantTier == lastTier) {
             return;
         }
+
+        // ★ 2026-11-20：跨过超级加热阈值时打一行，用来在游戏里确认这条链路真的走了。
+        //   老大反馈「2300 之后不算超级加热」，而代码里常量/判定/写入都是 2300，
+        //   所以要么是没跨过去（温度被耗电循环拽下来了），要么是写进去了但表现不对。
+        //   这一行能把两种情况分开：有这行 = 服务端确实进了 SEETHING。
+        if (DEBUG_STOVE && want == BlazeBurnerBlock.HeatLevel.SEETHING
+            && lastHeatLevel != BlazeBurnerBlock.HeatLevel.SEETHING) {
+            org.slf4j.LoggerFactory.getLogger("woodencog/stove").info(
+                "[炉子诊断] 进入超级加热 pos={} cur={} target={} stored={} tier={}",
+                worldPosition, String.format("%.1f", currentTemperature),
+                targetTemperatureValue, energy.getEnergyStored(), wantTier);
+        }
+
         lastHeatLevel = want;
         lastTier = wantTier;
 
@@ -1182,6 +1260,22 @@ public class ElectricStoveBlockEntity extends SmartBlockEntity {
 
     public double getCurrentTemperature() {
         return currentTemperature;
+    }
+
+    public Component getActualTemperatureTooltip() {
+        Component value = Component.literal(String.format(Locale.ROOT, "%.1f", getCurrentTemperature()))
+            .withStyle(ChatFormatting.GOLD);
+        return Component.translatable("woodencog.electric_stove.tooltip.actual_temperature", value);
+    }
+
+    @Override
+    public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
+        CreateLang.builder().add(getBlockState().getBlock().getName()).style(ChatFormatting.GRAY).forGoggles(tooltip);
+        CreateLang.builder().add(getActualTemperatureTooltip()).forGoggles(tooltip, 1);
+        Component target = Component.literal(Integer.toString(getTargetTemperature())).withStyle(ChatFormatting.AQUA);
+        CreateLang.builder().add(Component.translatable("woodencog.electric_stove.tooltip.target_temperature", target))
+            .forGoggles(tooltip, 1);
+        return true;
     }
 
     public int getEnergyStored() {

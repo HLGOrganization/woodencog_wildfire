@@ -7,6 +7,9 @@ import net.chauvedev.woodencog.block.WoodencogBlockEntityTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -143,6 +146,70 @@ public class ElectricStoveBlock extends BaseEntityBlock implements IWrenchable, 
     public RenderShape getRenderShape(BlockState state) {
         // 模型是普通 JSON 模型，不需要专门的 BER 渲染器。
         return RenderShape.MODEL;
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //  亮度：档位越高越亮，最亮 14（＝火把）
+    // ────────────────────────────────────────────────────────────────
+
+    /**
+     * 每一档（{@link #TIER} 0~8）对应的光照等级。
+     *
+     * <p>★ 2026-11-20 老大要求：「热量等级越高，亮度越高。最亮有火把那么亮。」
+     * 火把是 14，所以顶档就用 14（营火是 15，比火把亮一格，这里不用）。
+     *
+     * <p>档位和温度是绑定的（见 {@code ElectricStoveBlockEntity#tierFor}），
+     * 所以亮度会跟着温度连续地往上走，不会跳。数值不是线性的：
+     * 人眼对暗部更敏感，低档多给一点、高档压一点，看起来才"越烧越亮"而不是"一闪就到底"。
+     *
+     * <pre>
+     *   档 0（熄灭）      0    完全不亮
+     *   档 1（~267°C）    3    刚有点红
+     *   档 2（~533°C）    5
+     *   档 3（~800°C）    7
+     *   档 4（~1067°C）   8
+     *   档 5（~1333°C）  10
+     *   档 6（~1600°C）  11
+     *   档 7（~1867°C）  12
+     *   档 8（2300°C+）  14    ← 超级加热，和火把一样亮
+     * </pre>
+     */
+    private static final int[] LIGHT_BY_TIER = {0, 3, 5, 7, 8, 10, 11, 12, 14};
+
+    /**
+     * 方块光照函数：读方块状态里的 {@link #TIER}。
+     *
+     * <p>注册时通过 {@code properties(p -> p.lightLevel(ElectricStoveBlock::lightForState))} 挂上去。
+     * <b>必须</b>用方块状态算而不是读方块实体 —— 光照是在客户端按区块烘焙的，
+     * 那时候方块实体不一定存在；只认方块状态才能被 {@code level.setBlock(..., 2)} 刷到。
+     */
+    public static int lightForState(BlockState state) {
+        if (!state.hasProperty(TIER)) {
+            return 0;
+        }
+        int tier = state.getValue(TIER);
+        if (tier < 0 || tier >= LIGHT_BY_TIER.length) {
+            return 0;
+        }
+        return LIGHT_BY_TIER[tier];
+    }
+
+    @Override
+    public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
+        int tier = state.hasProperty(TIER) ? state.getValue(TIER) : 0;
+        if (tier <= 0) {
+            return;
+        }
+
+        double x = pos.getX() + 0.5D;
+        double y = pos.getY() + 0.9D;
+        double z = pos.getZ() + 0.5D;
+
+        int soundChance = Math.max(4, 24 - tier * 3);
+        if (random.nextInt(soundChance) == 0) {
+            level.playLocalSound(x, y, z, SoundEvents.FIRE_AMBIENT, SoundSource.BLOCKS,
+                0.3F + 0.08F * tier, 0.6F + random.nextFloat() * 0.3F, false);
+        }
     }
 
     @Override
